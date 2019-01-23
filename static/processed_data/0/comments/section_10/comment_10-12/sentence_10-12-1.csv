@@ -1,0 +1,2 @@
+sentence_id,comment_id,language,sentence,sentiment_score,magnitude_score,number_of_words
+10-12-1,10-12,en,Very well done by both moderator and panel.,0.6000000238418579,0.6000000238418579,8

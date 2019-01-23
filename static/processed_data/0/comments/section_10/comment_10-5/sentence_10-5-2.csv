@@ -1,0 +1,2 @@
+sentence_id,comment_id,language,sentence,sentiment_score,magnitude_score,number_of_words
+10-5-2,10-5,en,The panels were otherwise very well-spoken and knowledgeable and I would have enjoyed listening regardless of how on topic they were with respect to procurement.,0.800000011920929,0.800000011920929,25

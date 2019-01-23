@@ -1,0 +1,2 @@
+sentence_id,comment_id,language,sentence,sentiment_score,magnitude_score,number_of_words
+10-15-5,10-15,en,He sent numerous emails for support and he received no response from anyone.,-0.800000011920929,0.800000011920929,13

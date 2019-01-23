@@ -1,0 +1,2 @@
+sentence_id,comment_id,language,sentence,sentiment_score,magnitude_score,number_of_words
+10-21-1,10-21,fr,"Ce n'était pas une présentaiton sur l'utilisation de l'IA dans la fonction publique en générale, mais bien sur l'utilisation de l'IA pour créer un outil de procurement.",0.0,0.0,27

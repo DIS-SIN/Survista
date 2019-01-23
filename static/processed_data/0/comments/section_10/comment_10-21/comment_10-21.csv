@@ -1,0 +1,2 @@
+comment_id,language,comment,sentiment_score,magnitude_score,number_of_sentences,number_of_words
+10-21,fr,"Le titre n'était pas assez spécifique. Ce n'était pas une présentaiton sur l'utilisation de l'IA dans la fonction publique en générale, mais bien sur l'utilisation de l'IA pour créer un outil de procurement. J'aurais préféré une présentation plus générale ou un titre plus spécifique.",-0.10000000149011612,1.0,3,44

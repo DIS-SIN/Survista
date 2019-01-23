@@ -1,0 +1,2 @@
+sentence_id,comment_id,language,sentence,sentiment_score,magnitude_score,number_of_words
+10-11-3,10-11,en,I suggest sending the video of the event to those who attend the webcast.,0.4000000059604645,0.4000000059604645,14

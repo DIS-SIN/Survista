@@ -1,0 +1,2 @@
+sentence_id,comment_id,language,sentence,sentiment_score,magnitude_score,number_of_words
+12-3-1,12-3,fr,"Ils font un très bon travail, mais le ""ton"" ne reflète pas l'interlocuteur alors cela rend la présentation plus monotone.",-0.6000000238418579,0.6000000238418579,22

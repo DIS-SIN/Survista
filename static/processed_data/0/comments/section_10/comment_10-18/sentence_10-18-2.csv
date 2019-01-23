@@ -1,0 +1,2 @@
+sentence_id,comment_id,language,sentence,sentiment_score,magnitude_score,number_of_words
+10-18-2,10-18,en,"At the end, I was certainly none the wiser.",0.0,0.0,9

@@ -1,0 +1,2 @@
+sentence_id,comment_id,language,sentence,sentiment_score,magnitude_score,number_of_words
+10-5-1,10-5,en,I was expecting more information about actual procurement but the panel seemed mostly interested in discussing rather basic/introductory concepts about AI.,-0.5,0.5,21

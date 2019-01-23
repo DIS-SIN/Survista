@@ -1,0 +1,2 @@
+sentence_id,comment_id,language,sentence,sentiment_score,magnitude_score,number_of_words
+12-4-0,12-4,fr,La webdiffusion à mon site (Centre de recherche de Valcartier QC) coupait sans arrêt ce qui rendait impossible de suivre l'événement.,-0.5,0.5,23

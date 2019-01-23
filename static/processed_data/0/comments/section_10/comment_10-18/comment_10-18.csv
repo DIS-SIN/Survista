@@ -1,0 +1,4 @@
+comment_id,language,comment,sentiment_score,magnitude_score,number_of_sentences,number_of_words
+10-18,en,"The panel seemed to know little about what AI was and what it could do. They spoke in generalities about the ethics of AI and algorithmic impact assessments, but my impression was that they really didn't understand what that meant. At the end, I was certainly none the wiser.
+
+And, I experienced technical issues. The video froze often but I was never able to connect with audio only.",-0.30000001192092896,2.0,5,69

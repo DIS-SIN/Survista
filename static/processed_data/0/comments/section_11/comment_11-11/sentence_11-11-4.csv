@@ -1,0 +1,2 @@
+sentence_id,comment_id,language,sentence,sentiment_score,magnitude_score,number_of_words
+11-11-4,11-11,en,both?,0.0,0.0,1

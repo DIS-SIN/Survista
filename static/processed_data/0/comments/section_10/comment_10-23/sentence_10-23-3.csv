@@ -1,0 +1,2 @@
+sentence_id,comment_id,language,sentence,sentiment_score,magnitude_score,number_of_words
+10-23-3,10-23,en,"The panelists clearly possessed a significant amount of information, but I felt that they did not go into sufficient detail on their experiences.",-0.699999988079071,0.699999988079071,23

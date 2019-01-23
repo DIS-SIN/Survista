@@ -1,0 +1,2 @@
+sentence_id,comment_id,language,sentence,sentiment_score,magnitude_score,number_of_words
+10-1-6,10-1,en,GC tends to be more static in nature because of the complexity of its organizational structure.,0.10000000149011612,0.10000000149011612,16

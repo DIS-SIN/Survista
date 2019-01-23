@@ -1,0 +1,2 @@
+sentence_id,comment_id,language,sentence,sentiment_score,magnitude_score,number_of_words
+16-1-0,16-1,en,"Change Management: I'd like to listen to a discussion on how the GC is building capacity (communities of practice, focus groups, working groups, learning opportunities, etc.).",0.5,0.5,29

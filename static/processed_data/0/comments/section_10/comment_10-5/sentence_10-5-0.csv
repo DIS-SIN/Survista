@@ -1,0 +1,2 @@
+sentence_id,comment_id,language,sentence,sentiment_score,magnitude_score,number_of_words
+10-5-0,10-5,en,The webcast delivery was almost unwatchable due to frequently frozen video stream.,-0.8999999761581421,0.8999999761581421,12

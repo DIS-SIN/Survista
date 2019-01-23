@@ -1,0 +1,2 @@
+sentence_id,comment_id,language,sentence,sentiment_score,magnitude_score,number_of_words
+11-11-5,11-11,en,This is a tool.,0.10000000149011612,0.10000000149011612,4

@@ -1,0 +1,2 @@
+sentence_id,comment_id,language,sentence,sentiment_score,magnitude_score,number_of_words
+10-14-0,10-14,fr,"Certains documents ont été mentionnés, présentés ou distribués au gens sur place mais ceux comme moi en webdiffusion n'avions pas accès à ces documents.",0.0,0.0,24

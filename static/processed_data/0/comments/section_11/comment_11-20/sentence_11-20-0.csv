@@ -1,0 +1,2 @@
+sentence_id,comment_id,language,sentence,sentiment_score,magnitude_score,number_of_words
+11-20-0,11-20,en,Did not participate in this portion of the event,-0.30000001192092896,0.30000001192092896,9

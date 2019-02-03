@@ -13,43 +13,87 @@ from nltk.tokenize import word_tokenize
 import copy
 import random
 import shutil
+from distutils.dir_util import copy_tree
+class MetadataFileNotExist(FileNotFoundError):
+    pass
+class RawdataFolderNotExist(FileNotFoundError):
+    pass
+class QuestionIndexFileNotExist(FileNotFoundError):
+    pass
+class MetadataFormatNotValid(ValueError):
+    pass
 class SurveyDataLoader:
-    def __init__(self, path_to_raw_file,
-                 db_connection,                 
-                 path_to_index = None,
-                 path_to_metadata = None,
-                 path_to_comments_folder = None):
+    def __init__(self, path_to_raw_folder,
+                 path_to_processed_folder,
+                 path_to_json_folder,
+                 db_connection,
+                 survey_preprocessed = False):
         #load raw file path and index db connection into object variabled
-        self.path_to_raw_file = path_to_raw_file
+        self.path_to_raw_folder = path_to_raw_folder
+        self.path_to_processed_folder = path_to_processed_folder
+        self.path_to_json_folder = path_to_json_folder
         self.db = db_connection
         #check if raw file path exists and throw an error if not
-        if os.path.isdir(self.path_to_raw_file) == False:
-            raise FileNotFoundError('The path_to_raw_file {path} is not valid'.format(path= self.path_to_raw_file))
-        # if path of metadata is not provided assume the default path and try loading it into a dataframe
-        if path_to_metadata is None:
-            self.path_to_metadata = self.path_to_raw_file + '/survey_metadata.csv'
+        if os.path.isdir(self.path_to_raw_folder) == False and not survey_preprocessed:
+            error = RawdataFolderNotExist('The path_to_raw_folder {path} is not valid'.format(path= self.path_to_raw_folder))
+            self.__error_logger(error)
+        self.path_to_metadata = os.path.join(self.path_to_raw_folder , 'survey_metadata.csv')
         try:
             self.metadata = pd.read_csv(self.path_to_metadata, encoding = 'utf-8', index_col = 0)
-        except:
-            raise FileNotFoundError('The path_to_metadata {path} is not valid'.format(path = path_to_metadata))
-        #look at the db to see if the survey data already exists 
+            self.__check_metadata_format()
+        except FileNotFoundError as error:
+            error = MetadataFileNotExist('Metadata not found:' + str(error))
+            self.__error_logger(error)
+        except Exception as error:
+            self.__error_logger(error)
+        #look at the db to see if the survey data already exists
         self.__check_index()
         #check if these paths arguments are valid
         if not self.already_processing:
-            if os.path.isdir(self.path_to_raw_file) == False:
-                raise FileNotFoundError('The path_to_raw_file {path} is not valid'.format(path= self.path_to_raw_file))
-            if path_to_index is None:
-                self.path_to_index = self.path_to_raw_file + '/question_index.csv'
-                print(self.path_to_index)
-            if path_to_comments_folder is None:
-                self.path_to_comments_folder = self.path_to_processed_file + '/comments/'  
+            if os.path.isdir(self.path_to_raw_folder) == False:
+                if survey_preprocessed:
+                    if os.path.isfile(self.path_to_json_folder):
+                        os.remove(self.path_to_json_folder)
+                    if os.path.isdir(self.path_to_processed_folder):
+                        shutil.rmtree(self.path_to_processed_folder)
+                    self.db.execute("DELETE FROM index_table WHERE raw_data_path = '{path}'".format(path = self.path_to_raw_folder))
+                    self.db.excute("""INSERT INTO logs(log_type_id, raw_data_path, log_text, date_of_log) 
+                     VALUES({lti}, '{rdp}', '{lt}', '{dol}');""".format(
+                         lti = "(SELECT id FROM logTypes WHERE log_type = 'deletion')",
+                         rdp = self.path_to_raw_folder,
+                         lt = "Survey deleted from repository",
+                         dol = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
+                     ).replace("\n",""))
+                    self.db.commit()
+                    self.deleted = True
+                    return   
+                error = RawdataFolderNotExist('The path_to_raw_folder {path} is not valid'.format(path= self.path_to_raw_folder))
+                self.__error_logger(error)
+            if survey_preprocessed:
+                self.path_to_index = os.path.join(self.path_to_processed_folder, 'question_index.csv')
+            else:
+                self.path_to_index = os.path.join(self.path_to_raw_folder, 'question_index.csv')
+            if not os.path.isfile(self.path_to_index):
+                if survey_preprocessed:
+                    self.path_to_index_raw = os.path.join(self.path_to_raw_folder, 'question_index.csv')
+                    if not os.path.isfile(self.path_to_index_raw):
+                        error = QuestionIndexFileNotExist('Both raw folder and processed folder do not contain question_index.csv')
+                        self.__error_logger(error)
+                    else:
+                        shutil.copy2(self.path_to_index_raw ,self.path_to_index)
+                else:
+                    error =  QuestionIndexFileNotExist('Folder does not contain question_index.csv')
+                    self.__error_logger(error)
+            self.path_to_comments_folder = os.path.join(self.path_to_processed_folder, 'comments')
+            if os.path.isdir(self.path_to_processed_folder) and not survey_preprocessed:
+                shutil.rmtree(self.path_to_processed_folder)
+                copy_tree(self.path_to_raw_folder, self.path_to_processed_folder)
+            elif not survey_preprocessed:
+                copy_tree(self.path_to_raw_folder, self.path_to_processed_folder)    
             try:
                 self.index_df = pd.read_csv(self.path_to_index, encoding = 'utf-8', index_col = 0)
-            except FileNotFoundError:
-                raise FileNotFoundError("The path_to_index {path} is not valid".format(path = path_to_index))                       
-            #set object variables so object methods have access
-            self.path_to_index = path_to_index
-            self.path_to_metadata = path_to_metadata
+            except Exception as error:
+                self.__error_logger(error)                       
             #call private function which generates the survey datastructure
             self.__init_dict()
             self.__load_questions()
@@ -65,7 +109,7 @@ class SurveyDataLoader:
         results_dict["survey_date"] = self.metadata.loc[0,'Date_Of_Survey']
         results_dict['survey_location'] = self.metadata.loc[0,'Location_Of_Event']
         results_dict['number_of_questions'] = self.index_df.shape[0]
-        results_dict['date_generated'] = datetime.datetime.now().strftime('%d-%m-%y')
+        results_dict['date_generated'] = datetime.now().strftime('%d-%m-%y')
         results_dict['question_index'] = self.index_df
         results_dict['sentiment_score'] = 0.0
         results_dict['magnitude_score'] = 0.0
@@ -81,17 +125,17 @@ class SurveyDataLoader:
         results_dict = self.results_dict
         for i in self.index_df.index:
             try:
-                question_file = self.path_to_raw_file + '/q' + i + '.csv'
+                question_file = os.path.join(self.path_to_raw_folder, 'q' + i + '.csv')
                 results_dict['questions'][i] = {
                                 'index': i,
                                 'title': self.index_df.loc[i][0], 
                                 'response_data': pd.read_csv(question_file, encoding = 'utf-8'),
                                 'has_comments': False
                                }
-            except FileNotFoundError:
-                raise FileNotFoundError('Question file {q_file} could not be found, please modify your index or restore the file'.format(q_file = question_file)) 
+            except:
+                raise FileExistsError('Question file {q_file} could not be found, please modify your index or restore the file'.format(q_file = question_file)) 
     def __load_comments(self):
-        for file in os.listdir(self.path_to_raw_file):
+        for file in os.listdir(self.path_to_raw_folder):
             #decode the file object to a string name
             filename = os.fsdecode(file)
             #check if file is a comments file
@@ -104,7 +148,7 @@ class SurveyDataLoader:
                 if not question is None:
                     question['has_comments'] = True
                     try:
-                        file_path = os.path.join(self.path_to_raw_file, filename)
+                        file_path = os.path.join(self.path_to_raw_folder, filename)
                         question['comments'] = pd.read_csv(os.path.join(file_path),
                                                           encoding = 'utf-8',
                                                           index_col = 0)
@@ -152,100 +196,184 @@ class SurveyDataLoader:
         self.results_dict['magnitude_score'] = magnitude_total
     def __to_json(self):
         json_obj = self.results_dict
-        json_obj['index_used'] = json_obj['index_used'].to_dict()
+        json_obj['number_of_comments'] = int(json_obj['number_of_comments'])
+        json_obj['number_of_comment_sections'] = int(json_obj['number_of_comment_sections'])
+        json_obj['number_of_sentences'] = int(json_obj['number_of_sentences'])
+        json_obj['number_of_words'] = int(json_obj['number_of_words'])
+        json_obj['question_index'] = json_obj['question_index'].to_dict()
         json_obj['comments'] = json_obj['comments'].to_dict()
         json_obj['sentences'] = json_obj['sentences'].to_dict()
         for key in json_obj['questions']:
             json_obj['questions'][key]['response_data'] = json_obj['questions'][key]['response_data'].to_dict()
             if json_obj['questions'][key]['has_comments'] == True:
                 json_obj['questions'][key]['comments'] = json_obj['questions'][key]['comments'].to_dict()
-                json_obj['questions'][key]['sentences'] = json_obj['questions'][key]['sentences']
-        with open(self.path_to_json,'w+') as f:
+                json_obj['questions'][key]['sentences'] = json_obj['questions'][key]['sentences'].to_dict()
+        with open(self.path_to_json_file,'w+') as f:
             f.write(json.dumps(json_obj, ensure_ascii= False))
             f.close()
+    def __get_current_datetime(self):
+        return datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
     def __check_index(self):
+        db = self.db
+        query = """SELECT *
+               FROM index_table
+               WHERE raw_data_path = '{path}' ;
+            """.format(path = self.path_to_raw_folder).replace("\n","")
+        res = db.execute(query).fetchone()
+        return res 
+    def __initialise_row(self):
+        db = self.db
+        query = """
+               INSERT INTO index_table(survey_name, raw_data_path, processed_data_path, json_path, status_id, processing_date)
+                VALUES('{s}','{r}','{p}','{j}',{st},'{d}');
+            """.format(s= self.path_to_raw_folder,
+                       r= self.path_to_raw_folder,
+                       p= self.path_to_raw_folder,
+                       j= self.path_to_raw_folder,
+                       st = "(SELECT id FROM statuses WHERE status_name = 'processing')",
+                       d = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')).replace("\n", "")
+        db.execute(query)
+            #flush the pipeline
+        db.commit()
+    def __get_key(self):
+        db = self.db
+        key = db.execute("SELECT id FROM index_table WHERE raw_data_path = '{path}'".format(path = self.path_to_raw_folder)).fetchone()
+        row_initialised = False
+        if key is None:
+            self.__initialise_row()
+            key = db.execute("SELECT id FROM index_table WHERE raw_data_path = '{path}'".format(path = self.path_to_raw_folder)).fetchone()['id']
+            row_initialised = True 
+        else:
+            key = key['id']
+        self.key = key
+        return row_initialised
+    def __update_survey_entry_details(self):
+        db = self.db
+        self.path_to_processed_folder = os.path.join(self.path_to_processed_folder,str(self.key))
+        self.path_to_json_file = os.path.join(self.path_to_json_folder, str(self.key) + '.json') 
+        query = "UPDATE index_table SET survey_name = {survey_name}, processed_data_path = '{p_path}', json_path = '{j_path}' WHERE id = {id}".format(
+                survey_name = self.metadata.loc[0,'Title_Of_Survey'],
+                p_path = self.path_to_processed_folder,
+                j_path = self.path_to_json_file,
+                id = self.key
+        )
+        db.execute(query)
+        db.commit()
+        query = """
+        INSERT INTO logs(index_id, log_type_id, log_text, date_of_log)
+         VALUES({id},{t},'{l}','{d}');
+        """.format( id = self.key,
+                    t = "(SELECT id FROM logTypes WHERE log_type = 'new_survey_processing')",
+                    l = "New survey data being processed",
+                    d = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
+        ).replace("\n","")
+        db.execute(query)
+        db.commit()
+    def __get_status(self, status_id):
+        db = self.db
+        status = db.execute(("SELECT status_name FROM statuses WHERE id = {id} ;".format(id = status_id))).fetchone()
+        status = status['status_name']
+        return status
+    def __get_survey_entry(self):
+        db = self.db
+        row_initialised = self.__get_key()
+        res = db.execute('SELECT * FROM index_table WHERE id = {id}'.format(id= self.key))
+        return [row_initialised, res]
+    def __check_entry(self):
         #load into function level variable for convenience
         db = self.db
         #execute the query to check if the data exists and fetch the row if it does
-        res = db.execute(
-            """SELECT *
-               FROM index
-               WHERE raw_data_path = {path}
-            """.format(path = self.path_to_raw_file).replace("\n","")
-        ).fetchone()
+        res = self.__get_survey_entry()
         #if the row doesn't exist then get the last id and increment to get the key
-        if res is None:
-            count = db.execute(
-                """SELECT MAX(id) max_id FROM index"""
-            ).fetchone()['max_id']
-            self.key = count + 1
-            #generate paths and insert into index table
-            self.path_to_processed_file = './static/processed_data/' + self.key
-            self.path_to_json = './static/json/' + self.key + '.json'
-            db.execute("""
-               INSERT INTO index(survey_name, raw_data_path, processed_data_path, json_path, status, processing_data)
-                VALUES({s},{r},{p},{j},{st},{d})
-            """.format(s= self.metadata.loc[0,'Title_Of_Survey']),
-                       r= self.path_to_raw_file,
-                       p= self.path_to_processed_file,
-                       j= self.path_to_json,
-                       st = "processing",
-                       d = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S').replace("\n", "")
-            )
-            #flush the pipeline
-            db.commit()
+        if res[0]:
             #log the processing of new survey data
-            db.execute("""
-            INSERT INTO logs(index_id, log_type, log_text, date_of_log)
-             VALUES({id},{t},{l},{d})
-            """.format(id = self.key,
-                       t = "ns_processing",
-                       l = "New survey data being processed",
-                       d = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
-            ).replace("\n",""))
-            db.commit()
+            self.__update_survey_entry_details()
+            self.already_processing = False
         #othwerwise if the row exists meaning that the survey data already exists 
         else:
             #we need to check the status to ensure that we are not processing the same data at the same time
-            status = res['status']
+            status = self.__get_status(res[1]['status_id'])
             if status == 'processing':
                 self.already_processing = True
                 return
             else:
                 #Update status of the survey data to processing
                 self.already_processing = False
-                db.execute(""""
-                UPDATE index
-                 SET status = 'processing'
-                 WHERE id = {my_id}
-                """.format(my_id = res['id']).replace("\n",""))
-                db.execute("""
-                INSERT INTO logs(index_id, log_text, date_of_log)
-                 VALUES({id},{t},{l},{d})""".format(id = self.key,
-                       t = "s_processing",
+                query = "UPDATE index_table SET status_id = {status}, processing_date = '{t}' WHERE id = {my_id} ;".format(
+                    status = "(SELECT id FROM statuses WHERE status_name = 'processing')",
+                    my_id = self.key, 
+                    t = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')).replace("\n","")
+                db.execute(query)
+                query = """
+                INSERT INTO logs(index_id, log_type_id, log_text, date_of_log)
+                 VALUES({id},{t},'{l}','{d}');""".format(id = self.key,
+                       t = "(SELECT id FROM logTypes WHERE log_type = 'survey_reprocessing')",
                        l = "processing survey",
-                       d = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
-            ).replace("\n",""))
+                       d = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')).replace("\n","")
+                db.execute(query)
                 db.commit()
-                self.key = res['id']
-                self.path_to_processed_file = res['processed_data_path']
-                self.path_to_json = res['json_path']
+                self.path_to_processed_folder = res[1]['processed_data_path']
+                self.path_to_json_file = res[1]['json_path']
     def __completed(self):
         #when called will update the status and log it
         db = self.db
-        db.execute("""
-        UPDATE index
-         SET status = 'completed'
-         WHERE id = {my_id}
-        """.format(my_id = self.key).replace("\n",""))
-        db.execute("""
-                INSERT INTO logs(index_id, log_text, date_of_log)
-                 VALUES({id},{t},{l},{d})""".format(id = self.key,
-                       t = "completion_notice",
+        db.execute(("""
+        UPDATE index_table
+         SET status_id = {status}
+         WHERE id = {my_id} ;
+        """.format(status = "(SELECT id FROM statuses WHERE status_name = 'completed')"
+            ,my_id = self.key).replace("\n","")))
+        db.execute(("""
+                INSERT INTO logs(index_id, log_type_id, log_text, date_of_log)
+                 VALUES({id},{t},'{l}','{d}');""".format(id = self.key,
+                       t = "(SELECT id FROM logTypes WHERE log_type = 'completion_notice')",
                        l = "Survey processing completed",
                        d = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
-            ).replace("\n",""))
+            ).replace("\n","")))
         db.commit()
+    def __error_logger(self, error):
+        db = self.db
+        error_name = type(error).__name__ 
+        query = "SELECT id FROM errors WHERE error = '{error}'".format(error_name)
+        res = db.execute(query).fetchone()
+        self.__get_survey_entry()
+        if res is None:
+            query = "SELECT id FROM errors WHERE error = 'UnknownError'"
+            res = db.execute(query).fetchone()['id']
+        else:
+            query = """INSERT INTO logs(index_id, error_id, log_type_id, log_text, date_of_log)
+             VALUES ({iid},{eid},{ltid},'{lt}','{dof}')""".format(
+                 iid = self.key,
+                 eid = res['id'],
+                 ltid = "(SELECT id FROM logTypes WHERE log_type = 'error')",
+                 lt = str(error),
+                 dof = self.__get_current_datetime() 
+             ).replace("\n","")
+            db.execute(query)
+            db.commit()
+        raise error
+    def __check_metadata_format(self):
+        metadata_columns = {
+            "Title_Of_Survey" : 0,
+            "Date_Of_Survey": 0,
+            "Location_Of_Event": 0,
+            "Number_Of_Questions": 0,
+            "Date_Last_Scraped":0
+        }
+        for column in self.metadata.columns:
+            metacol = metadata_columns.get(column)
+            if metacol is None:
+                error = MetadataFormatNotValid("Column " + column + " is not valid")
+                self.__error_logger(error)
+            else:
+                column_value = self.metadata[0,column]
+                if column_value == "" or column_value != column_value:
+                    error = MetadataFormatNotValid("Columns included in metadata csv must not be empty")
+                    self.__error_logger(error)
+                else:
+                    metacol = column_value
+        #check for title and date 
+             
     #getters
     def get_all_questions(self):
         return self.results_dict['questions']
@@ -256,7 +384,7 @@ class CommentSectionLoader:
                  section_key, 
                  path_to_comments):
         #section paths are made this is under the comments folder consisting of section_ + the sectionKey (question index)
-        self.path_to_section = path_to_comments + "/section_" + section_key
+        self.path_to_section = os.path.join(path_to_comments, "section_" + section_key)
         #check if section folder exists and if not create it to house the comment files
         if os.path.isdir(self.path_to_section) == False:
             os.mkdir(self.path_to_section)
@@ -305,28 +433,30 @@ class CommentSectionLoader:
     def get_sentiment_score(self):
         return self.sentiment_score
     def get_magnitude_score(self):
-        return self.magnitude_score 
+        return self.magnitude_score
+
 class CommentLoader:
     def __init__(self, comment_key, section_key, comment, path_to_section):
         self.comment_key = comment_key
         self.section_key = section_key
-        self.path_to_comment = path_to_section + "/comment_" + comment_key
+        self.path_to_comment = os.path.join(path_to_section, "comment_" + comment_key)
         self.comment = comment
         self.number_of_words = 0
         self.sentences_frames = []
         if os.path.isdir(self.path_to_comment) == False:
             os.mkdir(self.path_to_comment)
             self.__init_sentiment()
-        elif os.path.isfile(self.path_to_comment + '/comment_' + comment_key + '.csv') == False:
+        elif os.path.isfile(os.path.join(self.path_to_comment,'comment_' + comment_key + '.csv')) == False:
             self.__init_sentiment()
         else:
-            comment_df = pd.read_csv(self.path_to_comment + '/comment_' + comment_key + '.csv',encoding = 'utf-8', index_col = 0)
+            comment_df = pd.read_csv(os.path.join(self.path_to_comment, 'comment_' + comment_key + '.csv'),
+            encoding = 'utf-8', index_col = 0)
             self.comment_frame = comment_df
             self.language = comment_df.loc[comment_key,'language']
             self.sentiment_score = comment_df.loc[comment_key,'sentiment_score']
             self.magnitude_score = comment_df.loc[comment_key,'magnitude_score']
-            self.number_of_sentences =  comment_df.loc[comment_key,'number_of_sentences']
-            self.number_of_words = comment_df.loc[comment_key, 'number_of_words']
+            self.number_of_sentences =  int(comment_df.loc[comment_key,'number_of_sentences'])
+            self.number_of_words = int(comment_df.loc[comment_key, 'number_of_words'])
             for index in range(0,self.number_of_sentences):
                 sentence_key = comment_key + '-' + str(index)
                 current_sentence = Sentence(sentence_key, comment_key, self.path_to_comment, self.language)
@@ -370,7 +500,8 @@ class CommentLoader:
         comment_df.loc[self.comment_key,'number_of_sentences'] = self.number_of_sentences
         comment_df.loc[self.comment_key,'number_of_words'] = self.number_of_words
         self.comment_frame = comment_df
-        comment_df.to_csv(self.path_to_comment + '/comment_' + self.comment_key + '.csv',encoding = 'utf-8')
+        comment_df.to_csv(os.path.join(self.path_to_comment, 'comment_' + self.comment_key + '.csv')
+        ,encoding = 'utf-8')
     def get_sentiment_score(self):
         return self.sentiment_score
     def get_magnitude_score(self):
@@ -387,11 +518,8 @@ class CommentLoader:
         return self.comment_frame 
 class Sentence:
     def __init__(self, sentence_key, comment_key, path_to_comment, comment_language = None, sentence = None):
-        self.path_to_sentence = path_to_comment + "/sentence_" + sentence_key + ".csv"
-        print(comment_key)
+        self.path_to_sentence = os.path.join(path_to_comment, "sentence_" + sentence_key + ".csv")
         if os.path.isfile(self.path_to_sentence) == False:
-            if sentence is None:
-                raise ValueError('sentence argument must not be none for new sentences')
             self.sentence = sentence.text.content
             self.sentiment_score = sentence.sentiment.score
             self.magnitude_score = sentence.sentiment.magnitude
@@ -423,7 +551,7 @@ class Sentence:
             self.sentence = sentence_df.loc[sentence_key,'sentence']
             self.sentiment_score = sentence_df.loc[sentence_key,'sentiment_score']
             self.magnitude_score = sentence_df.loc[sentence_key,'magnitude_score']
-            self.number_of_words = sentence_df.loc[sentence_key,'number_of_words']
+            self.number_of_words = int(sentence_df.loc[sentence_key,'number_of_words'])
     def __calculate_number_of_words(self):
         #creating array of words for text
         text = self.sentence

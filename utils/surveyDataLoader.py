@@ -22,93 +22,91 @@ class QuestionIndexFileNotExist(FileNotFoundError):
     pass
 class MetadataFormatNotValid(ValueError):
     pass
+class QuestionIndexFormatNotValid(ValueError):
+    pass 
 class SurveyDataLoader:
     def __init__(self, path_to_raw_folder,
                  path_to_processed_folder,
                  path_to_json_folder,
                  db_connection,
-                 survey_preprocessed = False):
+                 survey_preprocessed = False,
+                 force_process = False):
         #load raw file path and index db connection into object variabled
         self.path_to_raw_folder = path_to_raw_folder
         self.path_to_processed_folder = path_to_processed_folder
         self.path_to_json_folder = path_to_json_folder
         self.db = db_connection
-        #check if raw file path exists and throw an error if not
+        #check if survey is processing and if the survey is processing return
+        res = self.__get_survey_entry()
+        if not res[0]:
+            if self.__get_status(res[1]['status_id']) != "completed" and not force_process:
+                return
+        #check if raw file path file exists and is valid
         if os.path.isdir(self.path_to_raw_folder) == False and not survey_preprocessed:
             error = RawdataFolderNotExist('The path_to_raw_folder {path} is not valid'.format(path= self.path_to_raw_folder))
             self.__error_logger(error)
         self.path_to_metadata = os.path.join(self.path_to_raw_folder , 'survey_metadata.csv')
+        #attempt loading the survey metadata and then check it has a valid format 
         try:
             self.metadata = pd.read_csv(self.path_to_metadata, encoding = 'utf-8', index_col = 0)
-            self.__check_metadata_format()
         except FileNotFoundError as error:
-            error = MetadataFileNotExist('Metadata not found:' + str(error))
+            error = MetadataFileNotExist("Metadata not found:" + str(error))
             self.__error_logger(error)
+        #check format of metadata is valid
+        self.__check_metadata_format()
+        #if new survey then generate new processed data and json paths and then update database otherwise mark survey for processing
+        if res[0]:
+            self.__update_survey_entry_details()
+        else:
+            self.__mark_survey_status()
+        #check if these paths arguments are valid
+        if survey_preprocessed:
+            self.path_to_index = os.path.join(self.path_to_processed_folder, 'question_index.csv')
+        else:
+            self.path_to_index = os.path.join(self.path_to_raw_folder, 'question_index.csv')
+        if not os.path.isfile(self.path_to_index):
+            if survey_preprocessed:
+                self.path_to_index_raw = os.path.join(self.path_to_raw_folder, 'question_index.csv')
+                if not os.path.isfile(self.path_to_index_raw):
+                    error = QuestionIndexFileNotExist('Both raw folder and processed folder do not contain question_index.csv')
+                    self.__error_logger(error)
+                else:
+                    shutil.copy2(self.path_to_index_raw ,self.path_to_index)
+            else:
+                error =  QuestionIndexFileNotExist('Folder does not contain question_index.csv')
+                self.__error_logger(error)
+        #check if question index file is of right format
+        try:
+            self.index_df = pd.read_csv(self.path_to_index, encoding = 'utf-8', index_col = 0)
         except Exception as error:
             self.__error_logger(error)
-        #look at the db to see if the survey data already exists
-        self.__check_index()
-        #check if these paths arguments are valid
-        if not self.already_processing:
-            if os.path.isdir(self.path_to_raw_folder) == False:
-                if survey_preprocessed:
-                    if os.path.isfile(self.path_to_json_folder):
-                        os.remove(self.path_to_json_folder)
-                    if os.path.isdir(self.path_to_processed_folder):
-                        shutil.rmtree(self.path_to_processed_folder)
-                    self.db.execute("DELETE FROM index_table WHERE raw_data_path = '{path}'".format(path = self.path_to_raw_folder))
-                    self.db.excute("""INSERT INTO logs(log_type_id, raw_data_path, log_text, date_of_log) 
-                     VALUES({lti}, '{rdp}', '{lt}', '{dol}');""".format(
-                         lti = "(SELECT id FROM logTypes WHERE log_type = 'deletion')",
-                         rdp = self.path_to_raw_folder,
-                         lt = "Survey deleted from repository",
-                         dol = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
-                     ).replace("\n",""))
-                    self.db.commit()
-                    self.deleted = True
-                    return   
-                error = RawdataFolderNotExist('The path_to_raw_folder {path} is not valid'.format(path= self.path_to_raw_folder))
-                self.__error_logger(error)
-            if survey_preprocessed:
-                self.path_to_index = os.path.join(self.path_to_processed_folder, 'question_index.csv')
-            else:
-                self.path_to_index = os.path.join(self.path_to_raw_folder, 'question_index.csv')
-            if not os.path.isfile(self.path_to_index):
-                if survey_preprocessed:
-                    self.path_to_index_raw = os.path.join(self.path_to_raw_folder, 'question_index.csv')
-                    if not os.path.isfile(self.path_to_index_raw):
-                        error = QuestionIndexFileNotExist('Both raw folder and processed folder do not contain question_index.csv')
-                        self.__error_logger(error)
-                    else:
-                        shutil.copy2(self.path_to_index_raw ,self.path_to_index)
-                else:
-                    error =  QuestionIndexFileNotExist('Folder does not contain question_index.csv')
-                    self.__error_logger(error)
-            self.path_to_comments_folder = os.path.join(self.path_to_processed_folder, 'comments')
-            if os.path.isdir(self.path_to_processed_folder) and not survey_preprocessed:
-                shutil.rmtree(self.path_to_processed_folder)
-                copy_tree(self.path_to_raw_folder, self.path_to_processed_folder)
-            elif not survey_preprocessed:
-                copy_tree(self.path_to_raw_folder, self.path_to_processed_folder)    
-            try:
-                self.index_df = pd.read_csv(self.path_to_index, encoding = 'utf-8', index_col = 0)
-            except Exception as error:
-                self.__error_logger(error)                       
-            #call private function which generates the survey datastructure
-            self.__init_dict()
-            self.__load_questions()
-            self.__load_comments()
-            #Initialise Comment_Sections Object which handles comment data
-            self.__load_sentiment()
-            self.__to_json()
-            self.__completed() 
+        self.__check_index_format() 
+        if os.path.isdir(self.path_to_processed_folder) and not survey_preprocessed:
+            shutil.rmtree(self.path_to_processed_folder)
+            copy_tree(self.path_to_raw_folder, self.path_to_processed_folder)
+        elif not survey_preprocessed:
+            copy_tree(self.path_to_raw_folder, self.path_to_processed_folder)  
+        self.path_to_comments_folder = os.path.join(self.path_to_processed_folder, 'comments')                     
+        #call private function which generates the survey datastructure
+        self.__init_dict()
+        self.__load_questions()
+        self.__load_comments()
+        #Initialise Comment_Sections Object which handles comment data
+        self.__load_sentiment()
+        self.__to_json()
+        self.__completed() 
     def __init_dict(self):
         #This function is prodomanantly for readability of data structure
         results_dict = {}
-        results_dict["survey_title"] = self.metadata.loc[0,'Title_Of_Survey']
-        results_dict["survey_date"] = self.metadata.loc[0,'Date_Of_Survey']
-        results_dict['survey_location'] = self.metadata.loc[0,'Location_Of_Event']
-        results_dict['number_of_questions'] = self.index_df.shape[0]
+        results_dict["survey_title"] = self.metadata_columns['Title_Of_Survey']
+        results_dict["survey_date"] = self.metadata_columns['Date_Of_Survey']
+        if self.metadata_columns['Location_Of_Event'] != False:
+            results_dict['survey_location'] = self.metadata_columns['Location_Of_Event']
+        if self.metadata_columns['Date_Last_Scraped'] != False:
+            results_dict['date_last_scraped'] = self.metadata_columns['Date_Last_Scraped']
+        if self.metadata_columns['Number_Of_Questions'] != False:
+            results_dict['total_number_of_questions'] = int(self.metadata_columns['Number_Of_Questions'])
+        results_dict['processed_number_of_questions'] = self.index_df.shape[0]
         results_dict['date_generated'] = datetime.now().strftime('%d-%m-%y')
         results_dict['question_index'] = self.index_df
         results_dict['sentiment_score'] = 0.0
@@ -125,6 +123,7 @@ class SurveyDataLoader:
         results_dict = self.results_dict
         for i in self.index_df.index:
             try:
+                #TO ADD: Support for text questions
                 question_file = os.path.join(self.path_to_raw_folder, 'q' + i + '.csv')
                 results_dict['questions'][i] = {
                                 'index': i,
@@ -237,7 +236,7 @@ class SurveyDataLoader:
         db.commit()
     def __get_key(self):
         db = self.db
-        key = db.execute("SELECT id FROM index_table WHERE raw_data_path = '{path}'".format(path = self.path_to_raw_folder)).fetchone()
+        key = self.__check_index()
         row_initialised = False
         if key is None:
             self.__initialise_row()
@@ -251,8 +250,8 @@ class SurveyDataLoader:
         db = self.db
         self.path_to_processed_folder = os.path.join(self.path_to_processed_folder,str(self.key))
         self.path_to_json_file = os.path.join(self.path_to_json_folder, str(self.key) + '.json') 
-        query = "UPDATE index_table SET survey_name = {survey_name}, processed_data_path = '{p_path}', json_path = '{j_path}' WHERE id = {id}".format(
-                survey_name = self.metadata.loc[0,'Title_Of_Survey'],
+        query = "UPDATE index_table SET survey_name = '{survey_name}' , processed_data_path = '{p_path}', json_path = '{j_path}' WHERE id = {id}".format(
+                survey_name = self.metadata_columns['Title_Of_Survey'],
                 p_path = self.path_to_processed_folder,
                 j_path = self.path_to_json_file,
                 id = self.key
@@ -277,43 +276,28 @@ class SurveyDataLoader:
     def __get_survey_entry(self):
         db = self.db
         row_initialised = self.__get_key()
-        res = db.execute('SELECT * FROM index_table WHERE id = {id}'.format(id= self.key))
+        res = db.execute('SELECT * FROM index_table WHERE id = {id}'.format(id= self.key)).fetchone()
         return [row_initialised, res]
-    def __check_entry(self):
+    def __mark_survey_status(self):
         #load into function level variable for convenience
         db = self.db
         #execute the query to check if the data exists and fetch the row if it does
         res = self.__get_survey_entry()
-        #if the row doesn't exist then get the last id and increment to get the key
-        if res[0]:
-            #log the processing of new survey data
-            self.__update_survey_entry_details()
-            self.already_processing = False
-        #othwerwise if the row exists meaning that the survey data already exists 
-        else:
-            #we need to check the status to ensure that we are not processing the same data at the same time
-            status = self.__get_status(res[1]['status_id'])
-            if status == 'processing':
-                self.already_processing = True
-                return
-            else:
-                #Update status of the survey data to processing
-                self.already_processing = False
-                query = "UPDATE index_table SET status_id = {status}, processing_date = '{t}' WHERE id = {my_id} ;".format(
-                    status = "(SELECT id FROM statuses WHERE status_name = 'processing')",
-                    my_id = self.key, 
-                    t = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')).replace("\n","")
-                db.execute(query)
-                query = """
-                INSERT INTO logs(index_id, log_type_id, log_text, date_of_log)
-                 VALUES({id},{t},'{l}','{d}');""".format(id = self.key,
-                       t = "(SELECT id FROM logTypes WHERE log_type = 'survey_reprocessing')",
-                       l = "processing survey",
-                       d = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')).replace("\n","")
-                db.execute(query)
-                db.commit()
-                self.path_to_processed_folder = res[1]['processed_data_path']
-                self.path_to_json_file = res[1]['json_path']
+        query = "UPDATE index_table SET status_id = {status}, processing_date = '{t}' WHERE id = {my_id} ;".format(
+            status = "(SELECT id FROM statuses WHERE status_name = 'processing')",
+            my_id = self.key, 
+            t = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')).replace("\n","")
+        db.execute(query)
+        query = """
+        INSERT INTO logs(index_id, log_type_id, log_text, date_of_log)
+         VALUES({id},{t},'{l}','{d}');""".format(id = self.key,
+                t = "(SELECT id FROM logTypes WHERE log_type = 'survey_reprocessing')",
+                l = "processing survey",
+                d = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')).replace("\n","")
+        db.execute(query)
+        db.commit()
+        self.path_to_processed_folder = res[1]['processed_data_path']
+        self.path_to_json_file = res[1]['json_path']
     def __completed(self):
         #when called will update the status and log it
         db = self.db
@@ -334,7 +318,7 @@ class SurveyDataLoader:
     def __error_logger(self, error):
         db = self.db
         error_name = type(error).__name__ 
-        query = "SELECT id FROM errors WHERE error = '{error}'".format(error_name)
+        query = "SELECT id FROM errors WHERE error = '{error_name}'".format(error_name = error_name)
         res = db.execute(query).fetchone()
         self.__get_survey_entry()
         if res is None:
@@ -342,7 +326,7 @@ class SurveyDataLoader:
             res = db.execute(query).fetchone()['id']
         else:
             query = """INSERT INTO logs(index_id, error_id, log_type_id, log_text, date_of_log)
-             VALUES ({iid},{eid},{ltid},'{lt}','{dof}')""".format(
+             VALUES ({iid},{eid},{ltid},"{lt}",'{dof}')""".format(
                  iid = self.key,
                  eid = res['id'],
                  ltid = "(SELECT id FROM logTypes WHERE log_type = 'error')",
@@ -350,15 +334,20 @@ class SurveyDataLoader:
                  dof = self.__get_current_datetime() 
              ).replace("\n","")
             db.execute(query)
+            query = "UPDATE index_table SET status_id = {status_id} WHERE id = {key}".format(
+                status_id = "(SELECT id FROM statuses WHERE status_name = 'erred')",
+                key = self.key
+            )
+            db.execute(query)
             db.commit()
         raise error
     def __check_metadata_format(self):
         metadata_columns = {
-            "Title_Of_Survey" : 0,
-            "Date_Of_Survey": 0,
-            "Location_Of_Event": 0,
-            "Number_Of_Questions": 0,
-            "Date_Last_Scraped":0
+            "Title_Of_Survey" : False,
+            "Date_Of_Survey": False,
+            "Location_Of_Event": False,
+            "Number_Of_Questions": False,
+            "Date_Last_Scraped":False
         }
         for column in self.metadata.columns:
             metacol = metadata_columns.get(column)
@@ -366,19 +355,35 @@ class SurveyDataLoader:
                 error = MetadataFormatNotValid("Column " + column + " is not valid")
                 self.__error_logger(error)
             else:
-                column_value = self.metadata[0,column]
+                column_value = self.metadata.loc[0,column]
                 if column_value == "" or column_value != column_value:
                     error = MetadataFormatNotValid("Columns included in metadata csv must not be empty")
                     self.__error_logger(error)
                 else:
-                    metacol = column_value
-        #check for title and date 
-             
-    #getters
+                    metadata_columns[column] = column_value
+        if metadata_columns["Title_Of_Survey"] == False:
+            error = MetadataFormatNotValid("Column Title_Of_Survey in metadata.csv must be provided")
+            self.__error_logger(error)
+        if metadata_columns["Date_Of_Survey"] == False:
+            error = MetadataFormatNotValid("Column Date_Of_Survey in metadata.csv must be provided")
+            self.__error_logger(error)
+        self.metadata_columns = metadata_columns
+    def __check_index_format(self):
+        index_columns = {
+            "Question_Number": False,
+            "Question": False,
+            "Question_Type": False
+        }
+        for column in self.index_df.columns:
+            index_col = index_columns.get(column)
+            if index_col is None:
+                error = QuestionIndexFormatNotValid("Column " + column + " is not valid")
+                self.__error_logger(error)
+            else:
+                index_columns[column] = True
+        self.index_columns = index_columns
     def get_all_questions(self):
         return self.results_dict['questions']
-    def get_already_processing(self):
-        return self.already_processing
 class CommentSectionLoader:
     def __init__(self, sectionDict, 
                  section_key, 

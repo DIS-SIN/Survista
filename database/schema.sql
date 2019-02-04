@@ -51,8 +51,10 @@ CREATE TABLE statuses(
 INSERT INTO errors (error, error_description)
 VALUES ('FileNotFound', "The file is requested but could not be loaded or found"),
 ('MetadataFileNotExist', "The survey metadata file could not be found"),
-('RawdataFolderNotExist', "The raw data folder was deleted while processing")
-('QuestionIndexNotExist', "The survey question index file could not be found")
+('RawdataFolderNotExist', "The raw data folder was deleted while processing"),
+('QuestionIndexNotExist', "The survey question index file could not be found"),
+('MetadataFormatNotValid', "The survey_matadata.csv format is not valid"),
+('QuestionIndexFormatNotValid',"The question_index.csv format is not valid"),
 ('UnknownError', "An unknown error has occured and could not be resolved");
 INSERT INTO logTypes(log_type, log_type_description)
 VALUES ('new_survey_processing', "Processing a new survey data folder"),

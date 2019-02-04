@@ -32,78 +32,8 @@ def get_db(database_path):
 def load_survey(raw_path, processed_path, json_path, db, survey_processed= False):
     try:
         SurveyDataLoader(raw_path,processedDataFolder,jsonDataFolder, db, survey_processed)
-    except FileNotFoundError as e:
-        data_id = db.execute("SELECT id FROM index_table WHERE raw_data_path = '{p}'".format(p=rawDataFolder)).fetchone()
-        if data_id is None:
-            db.execute("""INSERT INTO logs(error_id, raw_data_path, log_text, date_of_log)
-            VALUES ({eid}, {lti}, '{rdp}', '{t}', '{dt}');""".format( 
-            eid = "(SELECT id FROM errors WHERE error = 'FileNotFound')",
-            lti = "(SELECT id FROM logTypes WHERE log_type = 'error')",
-            rdp = raw_path, 
-            t = str(e),
-            dt = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')).replace("\n", ""))
-            db.commit()
-        else:
-            db.execute("""INSERT INTO logs(error_id, index_id, log_text, date_of_log)
-            VALUES ({eid}, {lti},  {id}, '{t}', '{dt}');""".format( 
-            eid = "(SELECT id FROM errors WHERE error = 'FileNotFound')",
-            lti = "(SELECT id FROM logTypes WHERE log_type = 'error')",
-            id = data_id['id'], 
-            t = str(e),
-            dt = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')).replace("\n", ""))
-            db.execute("""UPDATE index_table 
-            SET status_id = {status_id} 
-            WHERE id = {id} """.format(status_id = "(SELECT id FROM statuses WHERE status_name = 'erred')",
-            id = data_id['id']))
-            db.commit()
-    except FileExistsError as e:
-        data_id = db.execute("SELECT id FROM index_table WHERE raw_data_path = '{p}'".format(p=rawDataFolder)).fetchone()
-        if data_id is None:
-            query = """INSERT INTO logs(error_id, log_type_id, raw_data_path, log_text, date_of_log)
-             VALUES ({eid}, {lti}, '{rdp}', '{t}', '{dt}');""".format( 
-            eid = "(SELECT id FROM errors WHERE error = 'FileNotExist')",
-            lti = "(SELECT id FROM logTypes WHERE log_type = 'error')",
-            rdp = raw_path, 
-            t = str(e),
-            dt = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')).replace("\n", "")
-            print(query)
-            db.execute(query)
-            db.commit()
-        else:
-            db.execute("""INSERT INTO logs(error_id, log_type_id, index_id, log_text, date_of_log)
-             VALUES ({eid}, {lti},  {id},  '{t}', '{dt}');""".format( 
-            eid = "(SELECT id FROM errors WHERE error = 'FileNotExist')",
-            lti = "(SELECT id FROM logTypes WHERE log_type = 'error')",
-            id = data_id['id'], 
-            t = str(e),
-            dt = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')).replace("\n", ""))
-            db.execute("""UPDATE index_table 
-             SET status_id = {status_id} 
-             WHERE id = {id} """.format(status_id = "(SELECT id FROM statuses WHERE status_name = 'erred')",
-            id = data_id['id']).replace("\n",""))
-            db.commit()
-    except Exception as e:
-        data_id = db.execute("SELECT id FROM index_table WHERE raw_data_path = '{p}'".format(p=rawDataFolder)).fetchone()
-        if data_id is None:
-            db.execute("""INSERT INTO logs(error_id, raw_data_path, log_text, date_of_log)
-             VALUES ({eid}, {lti}, '{rdp}', '{t}', '{dt}');""".format( eid = "(SELECT id FROM errors WHERE error = 'UnknownError')",
-            lti =  "(SELECT id FROM logTypes WHERE log_type = 'error')",
-            rdp = raw_path, 
-            t = str(e),
-            dt = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')).replace("\n", ""))
-            db.commit()
-        else:
-            db.execute("""INSERT INTO logs(error_id, index_id, log_text, date_of_log)
-             VALUES ({eid}, {lti}, {id}, '{t}', '{dt}');""".format( eid = "(SELECT id FROM errors WHERE error = 'UnknownError')",
-            lti = "(SELECT id FROM logTypes WHERE log_type = 'error')",
-            id = data_id['id'], 
-            t = str(e),
-            dt = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')).replace("\n", ""))
-            db.execute("""UPDATE index_table S
-             SET status_id = {status_id} 
-             WHERE id = {id} """.format(status_id = "(SELECT id FROM statuses WHERE status_name = 'erred')",
-            id = data_id['id']))
-            db.commit()
+    except:
+        pass 
 db = get_db(databaseFolder + '/index.sqlite')
 tables = pd.read_sql_query("SELECT name FROM sqlite_master WHERE type = 'table'", db)
 if tables.shape[0] == 0:

@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+{%block styling %}
+  <style>
+    #login_container{
+      margin-top: 13%;
+    }
+    #login_row{
+      display: flex;
+      justify-content: center;
+      align-content: center;
+    }
+    .messages{
+      border: 1px dotted grey;
+      background-color: azure;
+    }
+  </style>
+{% endblock %}
+{% block menu_options %} 
+<li class="nav-item">
+  <a class="nav-link" href='#'>Home<span class="sr-only">(current)</span></a>
+</li>
+<li class="nav-item">
+  <a class="nav-link" href="#">Survey Data</a>
+</li>
+<li class="nav-item">
+  <a class="nav-link" href="#">My Account</a>
+</li>
+{% endblock %}
+{%block user_actions %}
+<li class="nav-item active">
+  <a class="nav-link" href='{{url_for("auth.login")}}'>Login<span class="sr-only">(current)</span></a>
+</li>
+{% endblock %}
+{% block content %}
+ <div id = "login_container" class = "container-fluid">
+   <div id = "login_row" class = "row ">
+     <div id = "login_col" class="col col-md-4">
+        <div class="card text-left">
+            <div class="card-body">
+              <h4 class="card-title">Login</h4>
+              {% with messages = get_flashed_messages() %}
+                 {% if messages %}
+                  <div class = "messages">
+                   {% for message in messages %}
+                      <p class = "card-text">{{ message }}</p>
+                   {% endfor %}
+                  </div>
+                  {% endif %}
+              {% endwith %}
+
+              <form method = "post">
+                <div class="form-group">
+                  <label for="username">username</label>
+                  <input type="text" name="username" id="username" class="form-control" placeholder="username" aria-describedby="helpId" required>
+                  <small id="helpId" class="text-muted">Enter provided username</small>
+                  <br>
+                  <label for="password">password</label>
+                  <input type="password" name="password" id="password" class="form-control" placeholder="password" aria-describedby="helpId" required>
+                  <small id="helpId" class="text-muted">Enter provided password</small>
+                  <br> <br>
+                  <input type = "submit" value="Log In" class="btn btn-primary">
+                </div>
+                </form>
+            </div>
+          </div>
+     </div>
+   </div>
+ </div>
+
+{% endblock %}

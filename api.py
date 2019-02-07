@@ -24,7 +24,37 @@ def create_api():
         reserved_usernames = app.config.get('RESERVED_USERNAMES')
         username_length_min = app.config.get('USERNAME_LENGTH_MIN')
         username_length_max = app.config.get('USERNAME_LENGTH_MAX')
-
+        ###password checks###
+        if password_symbols_required is not None and password_symbols_required == True:
+            if password_symbols is None:
+                password_symbols = '@$%#*!&'
+            app.config['PASSWORD_SYMBOLS'] = password_symbols.split()
+        else:
+            app.config['PASSWORD_SYMBOLS_REQUIRED'] = False
+        if password_uppercase_required is None or not password_uppercase_required == True:
+            app.config['PASSWORD_UPPERCASE_REQUIRED'] = False
+        if password_uppercase_required is None or not password_numbers_required == True:
+            app.config['PASSWORD_NUMBERS_REQUIRED'] = False 
+        #password_length_min  
+        if password_length_min is not None and type(password_length_min) != int():
+            raise TypeError('PASSWORD_LENGTH_MIN must be of type int')
+        elif password_length_min is None:
+            password_length_min = 8
+            app.config['PASSWORD_LENGTH_MIN'] = 8
+        elif password_length_min > 16 or password_length_min < 4:
+            raise ValueError('PASSWORD_LENGTH_MIN must be between the values of 4 and 16')
+        #password_length_max
+        if password_length_max is not None and type(password_length_max) != int():
+            raise TypeError('PASSWORD_LENGTH_MAX must be of type int')
+        elif password_length_max is None:
+            password_length_max = 20
+            app.config['PASSWORD_LENGTH_MAX'] = 20
+        elif password_length_max > 32 or password_length_max < 8:
+            raise ValueError('PASSWORD_LENGTH_MAX must be between the values of 8 and 32')
+        elif password_length_max < password_length_min:
+            raise ValueError('PASSWORD_LENGTH_MAX must not be less than PASSWORD_LENGTH_MIN')
+        ###username checks###
+        
     else:
         if os.environ.get("SURVISTA_SECRET_KEY") is None:
             raise ValueError("SURVISTA_SECRET_KEY must be set as an environment variable")

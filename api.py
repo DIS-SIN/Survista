@@ -28,7 +28,7 @@ def create_api():
         if password_symbols_required is not None and password_symbols_required == True:
             if password_symbols is None:
                 password_symbols = '@$%#*!&'
-            app.config['PASSWORD_SYMBOLS'] = password_symbols.split()
+            app.config['PASSWORD_SYMBOLS'] = list(password_symbols)
         else:
             app.config['PASSWORD_SYMBOLS_REQUIRED'] = False
         if password_uppercase_required is None or not password_uppercase_required == True:
@@ -36,16 +36,16 @@ def create_api():
         if password_uppercase_required is None or not password_numbers_required == True:
             app.config['PASSWORD_NUMBERS_REQUIRED'] = False 
         #password_length_min  
-        if password_length_min is not None and type(password_length_min) != int():
-            raise TypeError('PASSWORD_LENGTH_MIN must be of type int')
+        if password_length_min is not None and type(password_length_min) != int:
+            raise TypeError('PASSWORD_LENGTH_MIN must be of type int not ' + str(type(password_length_min)) )
         elif password_length_min is None:
             password_length_min = 8
             app.config['PASSWORD_LENGTH_MIN'] = 8
         elif password_length_min > 16 or password_length_min < 4:
             raise ValueError('PASSWORD_LENGTH_MIN must be between the values of 4 and 16')
         #password_length_max
-        if password_length_max is not None and type(password_length_max) != int():
-            raise TypeError('PASSWORD_LENGTH_MAX must be of type int')
+        if password_length_max is not None and type(password_length_max) != int:
+            raise TypeError('PASSWORD_LENGTH_MAX must be of type int ' + str(type(password_length_max)))
         elif password_length_max is None:
             password_length_max = 20
             app.config['PASSWORD_LENGTH_MAX'] = 20
@@ -54,7 +54,35 @@ def create_api():
         elif password_length_max < password_length_min:
             raise ValueError('PASSWORD_LENGTH_MAX must not be less than PASSWORD_LENGTH_MIN')
         ###username checks###
-        
+        if reserved_usernames is not None:
+            if reserved_usernames_delimeter is None:
+                raise ValueError('RESERVED_USERNAMES provided but no RESERVED_USERNAMES_DELIMETER was provided')
+            if type(reserved_usernames) != str:
+                raise TypeError('RESERVED_USERNAMES must be of type str')
+            elif type(reserved_usernames_delimeter) != str:
+                raise TypeError("RESERVED_USERNAMES_DELIMETER must be of type str")
+            app.config['RESERVED_USERNAMES'] = reserved_usernames.split(reserved_usernames_delimeter)
+        else:
+            reserved_usernames = 'admin,owner,chuck_norris'
+            app.config['RESERVED_USERNAMES'] = reserved_usernames.split(',')
+        #username length min
+        if username_length_min is not None and type(username_length_min) != int:
+            raise TypeError('USERNAME_LENGTH_MIN must be of type int not ' + str(type(username_length_min)))
+        elif username_length_min is None:
+            username_length_min = 5
+            app.config['USERNAME_LENGTH_MIN'] = 5
+        elif username_length_min > 8 or username_length_min < 4:
+            raise ValueError('USERNAME_LENGTH_MIN must be between the values of 4 and 16')
+        #username length max
+        if username_length_max is not None and type(username_length_max) != int:
+            raise TypeError('USERNAME_LENGTH_MAX must be of type int not '+ str(type(username_length_max)))
+        elif username_length_max is None:
+            username_length_max = 10
+            app.config['USERNAME_LENGTH_MAX'] = 10
+        elif username_length_max > 15 or username_length_max < 6:
+            raise ValueError('USERNAME_LENGTH_MAX must be between the values of 8 and 32')
+        elif username_length_max < username_length_min:
+            raise ValueError('USERNAME_LENGTH_MAX must not be less than USERNAME_LENGTH_MIN')
     else:
         if os.environ.get("SURVISTA_SECRET_KEY") is None:
             raise ValueError("SURVISTA_SECRET_KEY must be set as an environment variable")
@@ -64,7 +92,7 @@ def create_api():
         app.config['PERMANENT_SESSION_LIFETIME'] = 600
         app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 600
         app.config['PASSWORD_SYMBOLS_REQUIRED'] = True
-        app.config['PASSWORD_SYMBOLS'] = '@$%#*!&'.split()
+        app.config['PASSWORD_SYMBOLS'] = list('@$%#*!&')
         app.config['PASSWORD_NUMBERS_REQUIRED'] = True
         app.config['PASSWORD_UPPERCASE_REQUIRED'] = True
         app.config['PASSWORD_LENGTH_MIN'] = 8

@@ -6,7 +6,18 @@ import string
 from datetime import datetime 
 from werkzeug.security import check_password_hash, generate_password_hash
 from db import get_db 
+import copy
 bp = Blueprint('auth', __name__, url_prefix='/auth')
+def login_required(view):
+    @functools.wraps(view)
+    def check_login_and_access(**kwargs):
+        if g.user is None:
+            return redirect(url_for('auth.login'))
+        else:
+            if g.user_status == 'deactivated':
+                return redirect(url_for('auth.not_authorized'))
+            return view(**kwargs)
+    return check_login_and_access
 @bp.route('/login', methods = ('GET', 'POST'))
 def login():
     if request.method == "POST":
@@ -45,57 +56,125 @@ def login():
 @bp.route('/update_account', methods = ('GET', 'POST'))
 @login_required
 def update_account():
-    if request.method == "GET":
-        if g.pcr is None and g.ucr is None:
-            return render_template('auth/contact_admin.html')
-        else:
-            return render_template('auth/update_details.html')
-    elif request.method == "POST":
+    if g.user_status == "admin" or g.user_status == "owner":
         try:
-            g.reserved_usernames.remove
-        password_required = not g.pcr is None
-        username_required = not g.ucr is None
+            g.reserved_usernames.remove(g.user_status)
+        except:
+            pass
+    if request.method == "POST":
+        password_required = not g.pcr == None
+        username_required = not g.ucr ==  None
+        print(username_required)
         new_username = request.form.get('new_username')
         new_password = request.form.get('new_password')
         old_password = request.form.get('old_password') 
         db = g.user_db
-        error = None
         if username_required: 
+            username_error = None
             if new_username is None:
-                error = "New username is required"
+                username_error = "New username is required"
+            elif g.user['username'] == new_username.strip().lower():
+                username_error = "Username must not be the same as the previous username"
             else:
                 #probably needs to be altered at some point to be less annoying 
                 new_username = new_username.strip()
-                char_array = new_username.split()
+                char_array = list(new_username)
                 invalidchars = set(string.punctuation.replace("_",""))
                 if char_array[0] == "_":
-                    error = "Username must not start with _"
+                    username_error = "Username must not start with _"
                 elif len(char_array) < g.username_length_min:
-                    error = "Username must be at least %s characters" % g.username_length_min
+                    username_error = "Username must be at least %s characters" % g.username_length_min
                 elif len(char_array) > g.username_length_max:
-                    error = "Username must not be more than %s characters" % g.username_length_max
-                char_ i = 0
-                while error is None and char_i < len(char_array):
+                    username_error = "Username must not be more than %s characters" % g.username_length_max
+                char_i = 0
+                while username_error is None and char_i < len(char_array):
                     if char_array[char_i] in invalidchars:
-                        error = "Username must not contain punctuation or special symbol"
+                        username_error = "Username must not contain punctuation or special symbol"
                     char_i += 1
-                if not (new_username.lower() in g.reserved_usernames or g.user_status in g.reserved_usernames)
-                    contains_reserved = [new_username.lower().find(reserved) for reserved in g.reserved_usernames]
-                    error = 'Username must not contain reserved usernames: '
-                    for i in range(0,len(contains_reserved)):
-                        if contains_reserved[i] == -1:
-                            error += g.reserved_usernames[i] + ' '
-                    error = error.rstrip()
-                elif g.user_status in g.reserved_usernames
-                    error = "username must not contain or be a reserved username: %s " % new_username
-                if g.user['username'] == new_username:
-                    error = "Username must not be the same as the previous username"
+                if not new_username.lower() in g.reserved_usernames:
+                    if not g.user_status == "owner":
+                        contains_reserved = [new_username.lower().find(reserved) for reserved in g.reserved_usernames]
+                        sorted_reserved = copy.deepcopy(contains_reserved)
+                        sorted_reserved.sort()
+                        if -1 != sorted_reserved[-1]:
+                            username_error = 'Username must not contain reserved usernames: '
+                            for i in range(0,len(contains_reserved)):
+                                if contains_reserved[i] == -1:
+                                    username_error += g.reserved_usernames[i] + ' '
+                            username_error = username_error.rstrip()
+                        elif new_username.lower() == "admin" :
+                            username_error = "Username must not be reserved username: admin"
                 if not db.execute("SELECT id FROM users WHERE username = ?", (new_username,)).fetchone() is None:
-                    error = "Username already exists please try another"
-        elif password_required and (new_password is None or old_password is None):
-            error = "Please enter your current password and a new password"
-        if username_required and new_username is None:
-            error = "Please enter your new username"
+                    username_error = "Username already exists please try another"
+            if not username_error is None:
+                flash(username_error,'username')
+                username_error = None
+            else:
+                query = "UPDATE users SET username = '{username}', username_change_required = 0 WHERE id = {id}".format(
+                    username = new_username,
+                    id = g.user['id']
+                )
+                db.execute(query)
+                db.commit()
+                session.pop('update_username', None)
+                g.ucr = None
+        if password_required:
+            password_error = None
+            if new_password is None:
+                password_error = "You must enter a new password"
+            elif old_password is None:
+                password_error = "You must enter your old password"
+            elif check_password_hash(g.user['password'], old_password) == False:
+                password_error = "Current Password is incorrect"
+            elif old_password.lower() == new_password.strip().lower():
+                password_error = "New password should not be the same as the old password"
+            else:
+                new_password = new_password.strip()
+                invalidchars = string.punctuation
+                for symbol in g.password_symbols:
+                    invalidchars = invalidchars.replace(symbol, "")
+                invalidchars = set(invalidchars)
+                char_new_password = list(new_password)
+                if len(char_new_password) < g.password_length_min:
+                    password_error = "Password length must not be less than minimum"
+                elif len(char_new_password) > g.password_length_max:
+                    password_error = "Password length must not be more than maximum"
+                char_i = 0
+                symbols = False
+                uppercase = False
+                numbers = False
+                while password_error is None and char_i < len(char_new_password):
+                    character = char_new_password[char_i]
+                    if g.password_symbols_required and character in g.password_symbols:
+                        symbols = True
+                    elif g.password_uppercase_required and character.isupper():
+                        uppercase = True
+                    elif g.password_numbers_required:
+                        try:
+                            int(character)
+                            numbers = True
+                        except:
+                            pass
+                    char_i += 1
+                if g.password_symbols_required and not symbols:
+                    password_error = "Password must contain at least 1 symbol"
+                elif g.password_uppercase_required and not uppercase:
+                    password_error = "Password must conatain at least 1 uppercase letter "
+                elif g.password_numbers_required and not numbers:
+                    password_error = "Password must contain at least 1 number"
+            if not password_error is None: 
+                flash(password_error, 'password')
+            else:
+                query = "UPDATE users SET password = '{password}' , password_change_required = {pcr} WHERE id = {id}".format(
+                    password = generate_password_hash(new_password),
+                    pcr = 0,
+                    id = g.user['id']
+                )
+                db.execute(query)
+                db.commit()
+                session.pop('update_password', None)
+                g.pcr = None
+    return render_template('auth/update_details.html')
 @bp.before_app_request
 def load_logged_in_user():
     db, _ = get_db()
@@ -103,9 +182,21 @@ def load_logged_in_user():
     if user_id is None:
         g.user = None
     else:
+        #load password settings
+        g.password_symbols_required = current_app.config['PASSWORD_SYMBOLS_REQUIRED']
+        if g.password_symbols_required:
+            g.password_symbols = current_app.config['PASSWORD_SYMBOLS']
+        g.password_numbers_required = current_app.config['PASSWORD_NUMBERS_REQUIRED']
+        g.password_uppercase_required = current_app.config['PASSWORD_UPPERCASE_REQUIRED']
+        g.password_length_min = current_app.config['PASSWORD_LENGTH_MIN'] 
+        g.password_length_max =  current_app.config['PASSWORD_LENGTH_MAX']
+        #load username settings 
+        g.reserved_usernames = current_app.config['RESERVED_USERNAMES']
+        g.username_length_min = current_app.config['USERNAME_LENGTH_MIN']
+        g.username_length_max = current_app.config['USERNAME_LENGTH_MAX']      
         g.ucr = session.get('update_username')
         g.pcr = session.get('update_password')
-        g.user = db.execute("SELECT * FROM user WHERE id = ?", (user_id, )).fetchone()
+        g.user = db.execute("SELECT * FROM users WHERE id = ?", (user_id, )).fetchone()
         g.user_status = db.execute("SELECT * FROM accessLevels WHERE id = ?", (g.user['access_level_id'],)).fetchone()
         if not g.user['access_decomission_on'] is None:
             if datetime.utcnow() >= datetime.strptime(g.user['access_decomission_on'], '%Y-%m-%d %H:%M:%S'):
@@ -168,7 +259,7 @@ def load_logged_in_user():
         if g.user_status != 'open' or g.user_status != 'restricted' or g.user_status != 'owner' or g.user_status != 'admin' or g.user_status != 'deactivated':
             query = "SELECT id, access_level FROM accessLevels WHERE id = {id}".format(
                    id = "(SELECT equivelent_to FROM accessLevels WHERE access_level = '{ac}')".format(
-                       id = g.user_status
+                       ac = g.user_status
                    )
                )
             equivalence = db.execute(query).fetchone()
@@ -180,13 +271,7 @@ def load_logged_in_user():
                 )
             else:
                 g.user_status = equivalence['access_level']
-def login_required(view):
-    @functools.wraps(view)
-    def check_login_and_access(**kwargs):
-        if g.user is None:
-            return redirect(url_for('auth.login'))
-        else:
-            if g.user_status == 'deactivated':
-                return redirect(url_for('auth.not_authorized'))
-            return view(**kwargs)
-    return check_login_and_access
+@bp.route('/logout')
+def logout():
+    session.clear()
+    return redirect(url_for('auth.login'))

@@ -1,0 +1,129 @@
+
+{% extends 'base.html' %}
+{%block styling %}
+  <style>
+    #login_container{
+      height: 100%;
+      align-items: center;
+      justify-content: center;
+      display: flex;
+
+    }
+    #login_row{
+      display: flex;
+      justify-content: center;
+      align-content: center;
+      width: 100%;
+    }
+    .messages{
+      border: 1px dotted grey;
+      background-color: azure;
+    }
+  </style>
+{% endblock %}
+{% block menu_options %} 
+<li class="nav-item">
+  <a class="nav-link" href='#'>Home<span class="sr-only">(current)</span></a>
+</li>
+<li class="nav-item">
+  <a class="nav-link" href="#">Survey Data</a>
+</li>
+<li class="nav-item active">
+  <a class="nav-link" href="#">My Account</a>
+</li>
+{% endblock %}
+{%block user_actions %}
+<li class="nav-item active">
+  <a class="nav-link" href='{{url_for("auth.logout")}}'>logout<span class="sr-only">(current)</span></a>
+</li>
+{% endblock %}
+{% block content %}
+<br>
+ <div id = "login_container">
+   <div id = "login_row" class = "row">
+     <div id = "login_col" class="col col-md-5">
+        <div class="card text-left">
+            <div class="card-body">
+              <h4 class="card-title">Change Details</h4>
+              <form method = "post">
+                <div class="form-group">
+                  {% if g.ucr %}
+                  <label for="new_username">New username</label>
+                  <small id="helpId" class="text-muted">
+                      <br>
+                        <b>Rules </b>
+                        <p style = "color: lightcoral"> username must not be or contain: {% for reserved in g.reserved_usernames %} {{reserved}}, {% endfor %} </p>
+                        <p style = "color: lightcoral">username must be at least {{g.username_length_min}} characters </p>
+                        <p style =" color: lightcoral"> username must be at most {{g.username_length_max}} characters </p>
+                    </small>
+                  {% with messages = get_flashed_messages(category_filter=["username"]) %}
+                  {% if messages %}
+                   <div class = "messages">
+                    {% for message in messages %}
+                       <p class = "card-text">{{ message }}</p>
+                    {% endfor %}
+                   </div>
+                   <br>
+                   {% endif %}
+                   {% endwith %}
+                  <input type="text" name="new_username" id="new_username" class="form-control" placeholder="new username" required>
+                  {% endif %}
+                  {% if g.pcr %}
+                  <br>
+                  <small id="helpId" class="text-muted">
+                      <br>
+                      <b>Rules</b>
+                      {% if g.password_symbols_required %}
+                         <p style =  "color: lightcoral">Your new password must contain at least 1 symbol</p>
+                         <p><span style = "color: lightcoral"> Symbols can include: </span>
+                            <span style = "color: lightblue">{% for symbol in g.password_symbols %} {{symbol}} {% endfor %}</span></p>
+                      {% else %}
+                         <p style = "color: lightcoral">Your new password cannot contain symbols</p>
+                      {% endif %}
+                      {% if g.password_uppercase_required %}
+                         <p style = "color: lightcoral"> Your new password must contain at least 1 uppercase character</p>
+                      {% endif %}
+                      {% if g.password_numbers_required %}
+                         <p style = "color: lightcoral"> Your new password must contain at least 1 number</p>
+                      {% endif %}
+                         <p style = "color: lightcoral"> Your new password must be at least {{g.password_length_min}} characters </p>
+                         <p style = "color: lightcoral"> Your new password must be at most {{g.password_length_max}} characters</p>
+                    </small>
+                    {% with messages = get_flashed_messages(category_filter=["password"]) %}
+                    {% if messages %}
+                   <div class = "messages">
+                    {% for message in messages %}
+                       <p class = "card-text">{{ message }}</p>
+                    {% endfor %}
+                   </div>
+                   <br>
+                   {% endif %}
+                   {% endwith %}
+                  <label for="old_password">Old password</label>
+                  <input type="password" name="old_password" id="password" class="form-control" placeholder="old password"required>
+                  <br>
+                  <label for="new_password">New password</label>
+                  <input type="password" name="new_password" id="password" class="form-control" placeholder="new password"required>
+                  <br>
+                  {% endif %}
+                  <br> <br>
+                  {% if g.pcr or g.ucr %}
+                  <input type = "submit" value="Submit" class="btn btn-primary">
+                  {% else %}
+                  <h3> All details at this time have been updated if you wish to reset your password or username again 
+                       please login and create a request, if you are an admin you may reset your password at any time through your 
+                        account page 
+                  </h3>
+                  <br>
+                  <a class = "btn btn-primary" href = "{{url_for('auth.login')}}"> Login</a>
+                  {% endif %}
+                </div>
+                </form>
+            </div>
+          </div>
+     </div>
+   </div>
+ </div>
+ <br>
+
+{% endblock %}

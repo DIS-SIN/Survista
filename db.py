@@ -4,6 +4,7 @@ import os
 import random
 import string
 from datetime import datetime
+from werkzeug.security import generate_password_hash
 def get_db():
     if 'db' not in g:
         g.index_db = sqlite3.connect(
@@ -49,7 +50,7 @@ def init_app():
         query = """INSERT INTO users (username, password, username_change_required, password_change_required, access_level_id, created_on)
          VALUES ('{un}', '{ps}' , {ucr}, {pcr}, {ali}, '{co}') """.format(
              un = temp_admin_username,
-             ps = temp_admin_pass,
+             ps = generate_password_hash(temp_admin_pass),
              ucr = 1,
              pcr = 1,
              ali = "(SELECT id FROM accessLevels WHERE access_level = 'owner')",
@@ -61,5 +62,6 @@ def init_app():
             os.mkdir("./recovery")
         with open("./recovery/temp_owner_credentials.txt", 'w+') as f:
             f.write("username : " + temp_admin_username + "\n")
-            f.write("password : " + temp_admin_pass)
+            f.write("password : " + temp_admin_pass + "\n")
+            f.write("recovery_key : " + recovery_key)
             f.close()

@@ -51,7 +51,7 @@ def login():
             if user['username_change_required'] == 0  and user['password_change_required'] == 1:
                 session['update_password'] = True
                 return redirect(url_for('auth.update_account'))
-            return "<p> you're logged in </p>"
+            return redirect(url_for("index.index"))
     return render_template('auth/login.html')
 @bp.route('/update_account', methods = ('GET', 'POST'))
 @login_required
@@ -256,7 +256,7 @@ def load_logged_in_user():
             db.commit()
             g.user = db.execute("SELECT * FROM users WHERE id = ?",(user_id,))
             g.user_status = 'open'
-        if g.user_status != 'open' or g.user_status != 'restricted' or g.user_status != 'owner' or g.user_status != 'admin' or g.user_status != 'deactivated':
+        if g.user_status != 'open' and g.user_status != 'restricted' and g.user_status != 'owner' and g.user_status != 'admin' and g.user_status != 'deactivated':
             query = "SELECT id, access_level FROM accessLevels WHERE id = {id}".format(
                    id = "(SELECT equivelent_to FROM accessLevels WHERE access_level = '{ac}')".format(
                        ac = g.user_status

@@ -104,12 +104,21 @@ def create_api():
     app.config['INDEX_DATABASE'] = os.path.realpath('./database/index.sqlite')
     app.config['USERS_DATABASE'] = os.path.realpath('./database/users.sqlite')
     app.config['DATABASE_SCHEMAS'] = os.path.realpath('./database')
+    app.config['ALLOWED_EXTENSIONS'] = set(['zip'])
+    app.config['TEMP_PATH'] = os.path.realpath('./temps')
+    try:
+        os.mkdir(app.config['TEMP_PATH'])
+    except:
+        pass
     import db
     with app.app_context():
         db.init_app()
     #create api
     import auth
     app.register_blueprint(auth.bp)
+    import index
+    app.register_blueprint(index.bp)
+    app.add_url_rule('/', endpoint = '/index')
     api = Api(app, prefix= app.config['MAIN_API_ROUTE'])
     #register routes
     return api, app

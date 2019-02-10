@@ -2,13 +2,7 @@
 {% extends 'base.html' %}
 {%block styling %}
   <style>
-    #login_container{
-      height: 100%;
-      align-items: center;
-      justify-content: center;
-      display: flex;
-
-    }
+  
     #login_row{
       display: flex;
       justify-content: center;
@@ -23,10 +17,7 @@
 {% endblock %}
 {% block menu_options %} 
 <li class="nav-item">
-  <a class="nav-link" href='#'>Home<span class="sr-only">(current)</span></a>
-</li>
-<li class="nav-item">
-  <a class="nav-link" href="#">Survey Data</a>
+  <a class="nav-link" href='#'>Home</a>
 </li>
 <li class="nav-item active">
   <a class="nav-link" href="#">My Account</a>
@@ -39,7 +30,6 @@
 {% endblock %}
 {% block content %}
 <br>
- <div id = "login_container">
    <div id = "login_row" class = "row">
      <div id = "login_col" class="col col-md-5">
         <div class="card text-left">
@@ -123,7 +113,6 @@
           </div>
      </div>
    </div>
- </div>
  <br>
 
 {% endblock %}

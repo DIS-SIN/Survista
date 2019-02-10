@@ -2,7 +2,7 @@ import sqlite3 as sq
 import pandas as pd
 import os
 import shutil
-from surveyDataLoader import SurveyDataLoader
+from .surveyDataLoader import SurveyDataLoader
 from datetime import datetime
 def fileChecker():
     databaseFolder = '../database'

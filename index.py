@@ -5,11 +5,12 @@ from db import get_db
 from auth import login_required 
 from werkzeug.utils import secure_filename
 from datetime import datetime
+from celery_maker import make_celery
+from utils.fileChecker import fileChecker
 import os 
 import hashlib
 import zipfile
 import shutil
-import tasks
 import time
 bp = Blueprint('index', __name__)
 @bp.route('/', methods = ("GET","POST"))
@@ -96,9 +97,10 @@ def index():
                     raw_data_path = os.path.join(current_app.static_folder,'raw_data')
                     shutil.move(folder_name, raw_data_path)
                     #TO-DO add workers config to specify how much workers should be started 
-                    tasks.run_check.delay()
-                    tasks.run_check.delay()
-                    tasks.run_check.delay()
+                    import api
+                    api.run_check.delay()
+                    api.run_check.delay()
+                    api.run_check.delay()
                     time.sleep(.3)
     query = "SELECT it.id, it.raw_data_path, it.processing_date, it.survey_name, st.status_name AS status FROM index_table AS it INNER JOIN statuses AS st ON it.status_id = st.id"
     g.surveys = db.execute(query).fetchall()

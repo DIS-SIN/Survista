@@ -12,13 +12,89 @@
 </style>
 {% endblock %}
 {% block scripts %}
-<script>
- $USER_STATUS = "{{g.user_status}}"
+<script type = "text/javascript">
+   $SCRIPT_ROOT = {{request.script_root|tojson|safe}};
 </script>
 <script>
-   (function(){
-       console.log($USER_STATUS);
-   })(document, window);
+    function reprocess_file(elem){
+        survey_id = elem.value;
+        console.log(survey_id);
+        jQuery.ajax(
+            {
+                url: $SCRIPT_ROOT + "{{url_for('index.reprocess_resource')}}",
+                data:  {id : survey_id},
+                type: "POST",
+                success: function(){
+                    window.location.reload(true)
+                },
+                error: function(jqXHR, exception){
+                    var msg = '';
+                    if (jqXHR.status === 0) {
+                        msg = 'Not connect.\n Verify Network.' + exception;
+                    } else if (jqXHR.status == 404) {
+                        msg = 'Requested page not found. [404]';
+                    } else if (jqXHR.status == 500) {
+                        msg = 'Internal Server Error [500].';
+                    } else if (exception === 'parsererror') {
+                        msg = 'Requested JSON parse failed.';
+                    } else if (exception === 'timeout') {
+                        msg = 'Time out error.';
+                    } else if (exception === 'abort') {
+                        msg = 'Ajax request aborted.';
+                    } else {
+                        msg = '' + jqXHR.responseText;
+                    }
+                    alert(msg)
+
+                }
+            }
+        );
+    }
+    function delete_file(elem){
+        survey_id = elem.value;
+        console.log(survey_id);
+        jQuery.ajax(
+            {
+                url: $SCRIPT_ROOT + "{{url_for('index.delete_resource')}}",
+                data:  {id : survey_id},
+                type: "POST",
+                success: function(){
+                    rows = jQuery("#resource_table").find("tbody > tr")
+                    console.log(jQuery("#resource_table").children())
+                    console.log(rows.toArray())
+                    
+                    rows.toArray().forEach(function(element) {
+                        id = jQuery(element).children().toArray()[0];
+                        console.log(id.innerHTML)
+                        if (id.innerHTML == survey_id){
+                            jQuery(element).remove();
+                        }
+                    });
+                },
+                error: function(jqXHR, exception){
+                    var msg = '';
+                    if (jqXHR.status === 0) {
+                        msg = 'Not connect.\n Verify Network.' + exception;
+                    } else if (jqXHR.status == 404) {
+                        msg = 'Requested page not found. [404]';
+                    } else if (jqXHR.status == 500) {
+                        msg = 'Internal Server Error [500].';
+                    } else if (exception === 'parsererror') {
+                        msg = 'Requested JSON parse failed.';
+                    } else if (exception === 'timeout') {
+                        msg = 'Time out error.';
+                    } else if (exception === 'abort') {
+                        msg = 'Ajax request aborted.';
+                    } else {
+                        msg = '' + jqXHR.responseText;
+                    }
+                    alert(msg)
+
+                }
+            }
+        );
+
+    }
 </script>
 {% endblock %}
 
@@ -77,7 +153,7 @@
         <a href="{{url_for('index.index')}}" class="btn btn-info btn-md">
             <i class="fas fa-sync-alt"></i> Refresh
         </a>
-       <table class="table">
+       <table id= "resource_table" class="table">
            <thead>
                <tr>
                    <th>Survey ID</th>
@@ -104,15 +180,15 @@
                       {%if row['status'] == 'completed' %}
                          <td style = "color:green"> completed</td>
                       {%elif row['status'] == 'processing' %}
-                         <td style ="color: yellow">processing</td>
+                         <td style ="color: orange">processing</td>
                       {%else %}
                          <td style = "color: red">Error</td>
                       {% endif %}
                       <td> {{row['processing_date']}} UTC</td>
                       {% if g.user_status == 'owner' or g.user_status == 'admin' %}
                       <td>
-                        <button name = "reprocess" type="button" class="btn btn-primary btn-sm" value= "{{row['id']}}" >Reprocess </button>
-                        <button name = "delete" type="button" style = "background-color: red; border-color: red;" class="btn btn-primary btn-sm" value = "{{row['id']}}">Delete </button>
+                        <button name = "reprocess" onclick= "reprocess_file(this)"type="button" class="btn btn-primary btn-sm" value= "{{row['id']}}" >Reprocess </button>
+                        <button name = "delete" onclick="delete_file(this)" type="button" style = "background-color: red; border-color: red;" class="btn btn-primary btn-sm" value = "{{row['id']}}">Delete </button>
                       </td>
                       {% endif %}
                       </tr>
@@ -123,5 +199,6 @@
    </div>    
 </div>
 </div>
+
 {% endblock %}
 

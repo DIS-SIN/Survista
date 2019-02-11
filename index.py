@@ -18,6 +18,7 @@ bp = Blueprint('index', __name__)
 def index():
     get_db()
     db = g.index_db
+    g.script_root = request.script_root
     if request.method == "POST":
         if 'survey_data' not in request.files:
             print(list(request.files.keys()))
@@ -119,3 +120,46 @@ def allowed_file(filename):
 def allowed_inner_file(filename):
     return '.' in filename and \
         filename.rsplit('.',1)[1] == "csv"
+@bp.route('/delete_resource', methods = ('POST',))
+@login_required
+def delete_resource():
+    get_db()
+    survey_id = request.form.get('id')
+    query = "SELECT raw_data_path FROM index_table where id = {id}".format(
+        id = survey_id
+    )
+    res = g.index_db.execute(query).fetchone()
+    if res is None:
+       return ('Resource has been already deleted', 503)
+    else:
+        os.chdir('./utils')
+        raw_data_path = res['raw_data_path']
+        raw_data_path = os.path.realpath(raw_data_path)
+        os.chdir('../')
+        shutil.rmtree(raw_data_path)
+        import api
+        api.run_check.delay()
+    return ('',202)
+@bp.route('/reprocess_resource', methods = ('POST',))
+@login_required
+def reprocess_resource():
+    get_db()
+    survey_id = request.form.get('id')
+    query = "SELECT status_id, processed_data_path FROM index_table WHERE id = {id}".format(
+        id = survey_id
+    )
+    res = g.index_db.execute(query).fetchone()
+    if res is None:
+       return ('Resource does not exist please refresh', 404)
+    else:
+        status = g.index_db.execute("SELECT status_name FROM statuses WHERE id = ?",(res['status_id'],)).fetchone()['status_name']
+        if status == "processing":
+            return ('Resource is already processing', 400)
+        os.chdir('./utils')
+        processed_data_path = res['processed_data_path']
+        processed_data_path = os.path.realpath(processed_data_path)
+        os.chdir('../')
+        shutil.rmtree(processed_data_path)
+        import api
+        api.run_check.delay()
+    return ('',202)

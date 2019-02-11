@@ -97,7 +97,8 @@ def index():
                         folder_name = os.path.join(temp_folder_name, folder_name)
                     raw_data_path = os.path.join(current_app.static_folder,'raw_data')
                     shutil.move(folder_name, raw_data_path)
-                    #TO-DO add workers config to specify how much workers should be started 
+                    #TO-DO add workers config to specify how much workers should be started
+                    shutil.rmtree(temp_folder_name)
                     import api
                     api.run_check.delay()
                     api.run_check.delay()
@@ -155,11 +156,15 @@ def reprocess_resource():
         status = g.index_db.execute("SELECT status_name FROM statuses WHERE id = ?",(res['status_id'],)).fetchone()['status_name']
         if status == "processing":
             return ('Resource is already processing', 400)
+
         os.chdir('./utils')
         processed_data_path = res['processed_data_path']
         processed_data_path = os.path.realpath(processed_data_path)
         os.chdir('../')
-        shutil.rmtree(processed_data_path)
+        try:
+            shutil.rmtree(processed_data_path)
+        except FileNotFoundError:
+            pass
         import api
         api.run_check.delay()
     return ('',202)

@@ -4,3 +4,9 @@
 **/*.sqlite
 **/recovery/
 **/temps/
+/static/raw_data/*
+/static/!raw_data/.gitkeep
+/static/processed_data/*
+/static/!processed_data/.gitkeep
+/static/json/*
+/static/!json/.gitkeep

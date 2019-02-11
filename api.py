@@ -121,7 +121,15 @@ import index
 app.register_blueprint(index.bp)
 celery = make_celery(app)
 app.add_url_rule('/', endpoint = '/index')
-api = Api(app, prefix= app.config['MAIN_API_ROUTE'])
+api = Api(app, prefix= '/' +  app.config['MAIN_API_ROUTE'])
+class ApiInfo(Resource):
+    def get(self):
+        return {"versionsAvailable" : [
+            "V1.0"
+        ]}
+api.add_resource(ApiInfo,'/')
+from api_v1.api_version_info import V1
+api.add_resource(V1,'/V1.0')
 @celery.task()
 def run_check():
     try:

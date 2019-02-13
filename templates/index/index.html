@@ -173,8 +173,10 @@
                       <td scope="row">{{row['id']}}</td>
                       {% if row['survey_name'] != row['raw_data_path']%}
                           <td> {{row['survey_name']}}</td>
+                      {% elif row['status'] == 'erred' %}
+                          <td style = "color: red"> Could Not Retrieve</td>
                       {% else %}
-                          <td style = "color: yellow"> Fetching Data</td>
+                          <td style = "color:orangered"> Fetching Data</td>
                       {% endif %}
                       <td> {{row['filename']}}</td>
                       {%if row['status'] == 'completed' %}

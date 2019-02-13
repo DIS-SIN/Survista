@@ -27,10 +27,12 @@ def close_db(e=None):
         user_db.close()
 def init_app():
     current_app.teardown_appcontext(close_db)
-    user_db, _ = get_db()
+    user_db, index_db = get_db()
     query = "SELECT * FROM sqlite_master WHERE type='table' AND  name = 'users'"
-    res = user_db.execute(query).fetchone()
-    if res == None:
+    user_res = user_db.execute(query).fetchone()
+    query = "SELECT * FROM sqlite_master WHERE type='table' AND  name = 'index_table'"
+    index_res = index_db.execute(query).fetchone()
+    if user_res == None:
         user_schema_path = os.path.join(current_app.config['DATABASE_SCHEMAS'], 'users_schema.sql')
         if not os.path.isfile(user_schema_path):
             raise FileNotFoundError("unable to find users_schema.sql to initialise user database")
@@ -65,3 +67,7 @@ def init_app():
             f.write("password : " + temp_admin_pass + "\n")
             f.write("recovery_key : " + recovery_key)
             f.close()
+    if index_res is None:
+        index_schema_path = os.path.join(current_app.config['DATABASE_SCHEMAS'], 'schema.sql')
+        with open(index_schema_path) as f:
+            index_db.executescript(f.read())

@@ -1,9 +1,6 @@
 from flask_restful import Resource
 from flask import g, current_app
-from db import get_db
 from basicauth import bauth
-import json
-import os
 from .api_utils.surveyData import SurveyData, SurveyNotFound, SurveyNotAvailable, SurveyProcessingError
 class Survey(Resource):
     @bauth.required

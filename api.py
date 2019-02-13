@@ -147,6 +147,10 @@ from api_v1.survey import Survey
 api.add_resource(Survey,
 '/V1.0/surveys/<int:surveyId>',
 '/V1.0/surveys/slug/<string:slugName>')
+from api_v1.questions import APIQuestions
+api.add_resource(APIQuestions,
+'/V1.0/surveys/<int:surveyId>/questions',
+'/V1.0/surveys/slug/<string:slugName>/questions')
 @celery.task()
 def run_check():
     try:

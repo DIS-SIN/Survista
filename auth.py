@@ -2,11 +2,14 @@ import functools
 from flask import (
     Blueprint, flash, g, redirect, render_template, request, session, url_for, current_app
 )
+from flask_basicauth import BasicAuth
 import string
 from datetime import datetime 
 from werkzeug.security import check_password_hash, generate_password_hash
 from db import get_db 
 import copy
+
+
 bp = Blueprint('auth', __name__, url_prefix='/auth')
 def login_required(view):
     @functools.wraps(view)
@@ -34,7 +37,11 @@ def login():
                 "SELECT * FROM users WHERE username = ?", (username,)
             ).fetchone()
             if user is None:
-                error = "You are not registered to use this API please contact the administrators"
+                error = "Username or password is invalid, if you need to reset credentials please contact the admin"
+            else:
+                password_valid = check_password_hash(user['password'], password)
+                if not password_valid:
+                    error = "Username or password is invalid, if you need to reset credentials please contact the admin"
         if not error is None:
             print(error)
             flash(error)

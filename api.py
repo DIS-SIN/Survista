@@ -1,5 +1,5 @@
 from flask import Flask
-from flask_restful import Resource, Api
+from flask_restful import Resource, Api, output_json
 import os
 from celery_maker import make_celery
 from utils.fileChecker import fileChecker
@@ -114,6 +114,8 @@ except:
 import db
 with app.app_context():
     db.init_app()
+import basicauth
+basicauth.init_app(app)
 #create api
 import auth
 app.register_blueprint(auth.bp)
@@ -121,7 +123,16 @@ import index
 app.register_blueprint(index.bp)
 celery = make_celery(app)
 app.add_url_rule('/', endpoint = '/index')
-api = Api(app, prefix= '/' +  app.config['MAIN_API_ROUTE'])
+class UnicodeApi(Api):
+    def __init__(self, *args, **kwargs):
+        super(UnicodeApi, self).__init__(*args, **kwargs)
+        self.app.config['RESTFUL_JSON'] = {
+            'ensure_ascii': False
+        }
+        self.representations = {
+            'application/json; charset=utf-8': output_json,
+        }
+api = UnicodeApi(app, prefix= '/' +  app.config['MAIN_API_ROUTE'])
 class ApiInfo(Resource):
     def get(self):
         return {"versionsAvailable" : [
@@ -130,6 +141,12 @@ class ApiInfo(Resource):
 api.add_resource(ApiInfo,'/')
 from api_v1.api_version_info import V1
 api.add_resource(V1,'/V1.0')
+from api_v1.surveys import Surveys
+api.add_resource(Surveys,'/V1.0/surveys')
+from api_v1.survey import Survey
+api.add_resource(Survey,
+'/V1.0/surveys/<int:surveyId>',
+'/V1.0/surveys/slug/<string:slugName>')
 @celery.task()
 def run_check():
     try:

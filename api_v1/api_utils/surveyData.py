@@ -213,7 +213,7 @@ class Questions:
             words_freq_english = [(word, sum_words_english[0,idx]) for word, idx in vec_english.vocabulary_.items()]
             words_freq_english = sorted(words_freq_english, key = lambda x: x[1], reverse = True)
             if len(words_freq_english) > 20:
-                top_words_english = words_freq_english[:20]
+                top_words_english = words_freq_english[:10]
             else:
                 top_words_english = words_freq_english[:len(words_freq_english)// 2]
             top_words_english_df = pd.DataFrame(top_words_english, columns=['Word', "Frequency"])

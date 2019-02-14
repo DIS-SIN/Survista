@@ -12,8 +12,12 @@ if os.path.isfile('./configs/settings.cfg'):
         app.config['SEND_FILE_MAX_AGE_DEFAULT '] = 0
         app.config['DEBUG'] = True
     else:
-        app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 600
+        app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 300
     #getting user settings if they exist
+    if app.config.get('SECRET_KEY') is None:
+        if os.environ.get("SURVISTA_SECRET_KEY") is None:
+            raise ValueError("SURVISTA_SECRET_KEY must be set as an environment variable")
+        app.config['SECRET_KEY'] = os.environ['SURVISTA_SECRET_KEY']
     password_symbols_required = app.config.get('PASSWORD_SYMBOLS_REQUIRED')
     password_symbols = app.config.get('PASSWORD_SYMBOLS')
     password_uppercase_required = app.config.get('PASSWORD_UPPERCASE_REQUIRED')
@@ -109,6 +113,18 @@ app.config['TEMP_PATH'] = os.path.realpath('./temps')
 app.config['CELERY_BROKER_URL'] = 'redis://localhost:6379/0'
 try:
     os.mkdir(app.config['TEMP_PATH'])
+except:
+    pass
+try:
+    os.mkdir('./static/raw_data')
+except:
+    pass
+try:
+    os.mkdir('./static/processed_data')
+except:
+    pass
+try:
+    os.mkdir('./static/json')
 except:
     pass
 import db

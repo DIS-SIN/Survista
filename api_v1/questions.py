@@ -19,11 +19,13 @@ class APIQuestions(Resource):
             withComments = args.get('withComments'), sentimentScoreMin = args.get('sentimentScoreMin'),
             sentimentScoreMax = args.get('sentimentScoreMax'), magnitudeScoreMin = args.get('magnitudeScoreMin'),
             magnitudeScoreMax = args.get('magnitudeScoreMax'))
+            data.get_survey_info()
         except SurveyNotFound as e:
             return {"error": repr(e)}, 400
         except SurveyNotAvailable as e:
             return {"error": repr(e)}, 202
         except SurveyProcessingError as e:
+            print(e)
             return {"error": repr(e)}, 404
         try:
             questions = data.get_questions_obj()

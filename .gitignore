@@ -1,9 +1,4 @@
 **/__pycache__/
-**/*.ipynb*
 **/.vscode/
-**/*.sqlite
-**/recovery/
-**/temps/
-/static/raw_data/*
-/static/processed_data/*
-/static/json/*
+/app/instance/*
+/stuff/*

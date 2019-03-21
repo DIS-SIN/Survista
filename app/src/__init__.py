@@ -177,6 +177,3 @@ def run_check():
 @app.route('/test/<string:id>/hello/<string:message>')
 def hello_world(id, message):
     return "<p>" + id + "</p>" + "<p>" + message + "</p>"
-if __name__ == "__main__":
-    app.run()
-      

@@ -3,3 +3,4 @@
 /app/instance/*
 **/.ipynb_checkpoints/*
 /stuff/*
+**/.sass-cache/*

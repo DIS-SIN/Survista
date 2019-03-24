@@ -1,0 +1,6 @@
+{% for item in site.pages %} 
+   {% if item.nav-include == true and item.title != "Home"%}
+   <a href = "{{ item.url}}" class = "button" >
+           {{ item.title}}</a>
+    {% endif %}
+{% endfor %}

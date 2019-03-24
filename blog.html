@@ -1,0 +1,22 @@
+---
+layout: default
+title: Blog
+nav-include: true
+---
+<h1>Latest Posts</h1>
+<ul>
+  {% assign psize = site.posts | size %}
+  {% if psize != 0 %}
+    {% for post in site.posts %}
+        <li>
+        <h2><a href="{{ post.url }}">{{ post.title }}</a></h2>
+        <p>{{ post.excerpt }}</p>
+        </li>
+    {% endfor %}
+  {% else %}
+  <div style = "text-align: center">
+    <h1> Coming Soon ! </h1>
+    <i class="fas fa-cog fa-spin fa-9x"></i>
+  </div>
+  {% endif %}
+</ul>

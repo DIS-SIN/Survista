@@ -1,73 +1,49 @@
-import sqlite3
-from flask import current_app, g
-import os
-import random
-import string
-from datetime import datetime
-from werkzeug.security import generate_password_hash
+from flask import current_app, g, Flask
+from src.models.base_model import base
+from src.models import init_base
+
 def get_db():
+    """
+    Used to load the sqlalchemy session in the g local proxy and then return the session
+    """
+    if 'scoped_session' not in g:
+        #get the scoped_session registry from the SQLAlchemy object
+        g.scoped_session = base.session
     if 'db' not in g:
-        g.index_db = sqlite3.connect(
-            current_app.config['INDEX_DATABASE'],
-            detect_types=sqlite3.PARSE_DECLTYPES
-        )
-        g.index_db.row_factory = sqlite3.Row
-        g.user_db = sqlite3.connect(
-            current_app.config['USERS_DATABASE'],
-            detect_types= sqlite3.PARSE_DECLTYPES
-        )
-        g.user_db.row_factory = sqlite3.Row
-    return g.user_db, g.index_db
+        # get the current session from the scoped_session registry
+        # >>> some_session = g.scoped_session()
+        # >>> other_session = g.scoped_session()
+        # >>> some_session is other_session
+        # >>> True
+        g.db = g.scoped_session()
+    return g.db
+
+
 def close_db(e=None):
-    index_db = g.pop('index_db', None)
-    if index_db is not None:
-        index_db.close()
-    user_db = g.pop('user_db', None)
-    if user_db is not None:
-        user_db.close()
-def init_app():
-    current_app.teardown_appcontext(close_db)
-    user_db, index_db = get_db()
-    query = "SELECT * FROM sqlite_master WHERE type='table' AND  name = 'users'"
-    user_res = user_db.execute(query).fetchone()
-    query = "SELECT * FROM sqlite_master WHERE type='table' AND  name = 'index_table'"
-    index_res = index_db.execute(query).fetchone()
-    if user_res == None:
-        user_schema_path = os.path.join(current_app.config['DATABASE_SCHEMAS'], 'users_schema.sql')
-        if not os.path.isfile(user_schema_path):
-            raise FileNotFoundError("unable to find users_schema.sql to initialise user database")
-        with open(user_schema_path) as f:
-            user_db.executescript(f.read())
-        #generate cryptographically secure username and password which will be changed upon first login
-        temp_admin_username = ''.join(random.choices(string.ascii_uppercase + string.ascii_lowercase + string.digits, k = 8))
-        temp_admin_pass = ''.join(random.choices(string.ascii_uppercase + string.ascii_lowercase + string.digits, k = 32))
-        #should the username and password of all admin be lost recovery key can be used for access this will change every 15 minutes 
-        recovery_key = ''.join(random.choices(string.ascii_uppercase + string.ascii_lowercase + string.digits, k = 32))
-        query = """INSERT INTO recovery(recovery_key, date_generated) VALUES ('{r}', '{d}')""".format(
-            r = recovery_key,
-            d = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
-        )
-        user_db.execute(query)
-        user_db.commit()
-        query = """INSERT INTO users (username, password, username_change_required, password_change_required, access_level_id, created_on)
-         VALUES ('{un}', '{ps}' , {ucr}, {pcr}, {ali}, '{co}') """.format(
-             un = temp_admin_username,
-             ps = generate_password_hash(temp_admin_pass),
-             ucr = 1,
-             pcr = 1,
-             ali = "(SELECT id FROM accessLevels WHERE access_level = 'owner')",
-             co = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
-         )
-        user_db.execute(query)
-        user_db.commit()
-        if not os.path.isdir("./recovery"):
-            os.mkdir("./recovery")
-        with open("./recovery/temp_owner_credentials.txt", 'w+') as f:
-            f.write("username : " + temp_admin_username + "\n")
-            f.write("password : " + temp_admin_pass + "\n")
-            f.write("recovery_key : " + recovery_key)
-            f.close()
-    if index_res is None:
-        index_schema_path = os.path.join(current_app.config['DATABASE_SCHEMAS'], 'schema.sql')
-        with open(index_schema_path) as f:
-            index_db.executescript(f.read())
+    """
+    Used to close the session and end the connection between the database and the app
+    """
+    scoped_session = g.pop('scoped_session', None)
+    g.pop("db", None)
+    if scoped_session is not None:
+        # the remove function rollsback and then calls the close function on the session of the registry
+        # >>> some_session = scoped_session()
+        # >>> scoped_session.remove()
+        # >>> new_session = scoped_session()
+        # >>> some_session is new_session
+        # >>> False
+        scoped_session.remove()
+
+def init_app(app:Flask):
+    # register the close_db with the removal of the app context event
+    app.teardown_appcontext(close_db)
+    # init_base is used to initialise the global SQLAlchemy 
+    init_base(app)
+
+
+def init_db():
+    base.create_all()
+    
+
+
+

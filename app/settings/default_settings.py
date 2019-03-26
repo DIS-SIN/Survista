@@ -13,13 +13,25 @@ SEND_FILE_MAX_AGE_DEFAULT = 0
 
 #The maximum ammount that is allowed to be uploaded in bytes 
 MAX_CONTENT_LENGTH = 16*1024*1024
+
+#The allowed extensions of file uploads
+ALLOWED_EXTENSIONS = ['zip', 'csv']
+
+SERVER_NAME  = "0.0.0.0:3000"
+################################################## FLASK SQLAlchemy SETTINGS #############################################################
+#Turning on sqlalchemy object modification event system because not used
+SQLALCHEMY_TRACK_MODIFICATIONS = False
+
+################################################## CELERY SETTINGS #######################################################################
+#The url of the broker which acts as the job queue
+CELERY_BROKER_URL = "redis://localhost:6379/0"
 ################################################## SURVISTA SETTINGS #####################################################################
 
 #If symbols will be required for passwords
 PASSWORD_SYMBOLS_REQUIRED = True
 
 #Which symbols are allowed for passwords
-PASSWORD_SYMBOLS = '@$%#*!&'
+PASSWORD_SYMBOLS_ALLOWED = '@$%#*!&'
 
 #If numbers are required for passwords
 PASSWORD_NUMBERS_REQUIRED = True
@@ -42,3 +54,11 @@ USERNAME_LENGTH_MIN = 5
 #The maximum length for usernames
 USERNAME_LENGTH_MAX = 10
 
+#Whether or not a username is required to have symbols
+USERNAME_SYMBOLS_REQUIRED = False
+
+#Symbols that users can use in their usernames
+USERNAME_SYMBOLS_ALLOWED = "@$%#*!&"
+
+#if an uppercase letter is needed in the username
+USERNAME_UPPERCASE_REQUIRED = True

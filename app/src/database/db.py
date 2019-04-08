@@ -53,11 +53,10 @@ def init_db(app):
     try:
         loaders = importlib.import_module('src.database.loaders')
         mods = detect(loaders)
-        print("hefdhewnfewnf")
         for mod in mods:
             mod_obj = getattr(loaders, mod)
             run_method = getattr(mod_obj, 'run')
             print(run_method)
             run_method(app)
     except ImportError:
-        print("bbfewkjbfewkjbf")
+        pass

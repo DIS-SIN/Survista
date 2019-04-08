@@ -18,7 +18,7 @@ def verify_username_constraints(app):
     
     #check if symbols exist and it is a string
     #if it exists but is not a string throw an error
-    if not isinstance(username_symbols, (str, None)):
+    if not (username_symbols is None or isinstance(username_symbols, (str,))):
         raise TypeError(f"USERNAME_SYMBOLS_ALLOWED must be str not {type(username_symbols)} ")
     elif username_symbols is not None:
         app.config['USERNAME_SYMBOLS_ALLOWED'] = list(username_symbols)
@@ -26,13 +26,13 @@ def verify_username_constraints(app):
         app.config['USERNAME_SYMBOLS_ALLOWED'] = False
 
     #See if the username uppercase requirement has been set otherwise set to false
-    if isinstance(username_uppercase_required, (None, bool)):
+    if username_uppercase_required is None or isinstance(username_uppercase_required, (bool,)):
         app.config["USERNAME_UPPERCASE_REQUIRED"] = username_uppercase_required or False 
     else:
         TypeError(f"USERNAME_UPPERCASE_REQUIRED must be of type bool not {type(username_uppercase_required)}")
     
     #username length min
-    if not isinstance(username_length_min, (int, None)):
+    if not (username_length_min is None or isinstance(username_length_min, (int,))):
         raise TypeError(f'USERNAME_LENGTH_MIN must be of type int or None not {type(username_length_min)}')
     elif username_length_min is not None and username_length_min > 8 or username_length_min < 4:
         raise ValueError('USERNAME_LENGTH_MIN must be between the values of 4 and 16')
@@ -41,7 +41,7 @@ def verify_username_constraints(app):
         app.config['USERNAME_LENGTH_MIN'] = 5
     
     #username length max
-    if not isinstance(username_length_max, (int, None)):
+    if not (username_length_max is None or isinstance(username_length_max, (int,))):
         raise TypeError(f'USERNAME_LENGTH_MAX must be of type None or int not {type(username_length_max)}')    
     elif isinstance(username_length_max, int) and username_length_max > 20 or username_length_max < 8:
         raise ValueError('USERNAME_LENGTH_MAX must be between the values of 8 and 32')
@@ -69,7 +69,7 @@ def verify_password_constraints(app):
     
     #check if symbols exist and it is a string
     #if it exists but is not a string throw an error
-    if not isinstance(password_symbols, (str,None)):
+    if not (password_symbols is None or isinstance(password_symbols, (str,))):
         raise TypeError(f"PASSWORD_SYMBOLS_ALLOWED must be str not {type(password_symbols)}")
     elif password_symbols is not None:
         app.config['PASSWORD_SYMBOLS_ALLOWED'] = list(password_symbols)
@@ -78,13 +78,13 @@ def verify_password_constraints(app):
 
     
     #See if the password uppercase requirement has been set otherwise set to false
-    if isinstance(password_uppercase_required, (None, bool)):
+    if not (password_uppercase_required is None or isinstance(password_uppercase_required, (bool, ))):
         app.config["PASSWORD_UPPERCASE_REQUIRED"] = password_uppercase_required or False 
     else:
         TypeError(f"PASSWORD_UPPERCASE_REQUIRED must be of type bool not {type(password_uppercase_required)}")
 
     #password_length_min
-    if not isinstance(password_length_min, (int, None)):
+    if not (password_length_min is None or isinstance(password_length_min, (int,))):
         raise TypeError(f'PASSWORD_LENGTH_MIN must be of type int or None not {type(password_length_min)}')
     elif password_length_min is not None and password_length_min > 16 or password_length_min < 4:
         raise ValueError('PASSWORD_LENGTH_MIN must be between the values of 4 and 16')
@@ -93,7 +93,7 @@ def verify_password_constraints(app):
         app.config['PASSWORD_LENGTH_MIN'] = 8
 
     #password_length_max
-    if not isinstance(password_length_max, (int, None)):
+    if not (password_length_max is None or isinstance(password_length_max, (int,))):
         raise TypeError(f'PASSWORD_LENGTH_MAX must be of type None or int not {type(password_length_max)}')    
     elif isinstance(password_length_max, int) and password_length_max > 32 or password_length_max < 10:
         raise ValueError('PASSWORD_LENGTH_MAX must be between the values of 8 and 32')

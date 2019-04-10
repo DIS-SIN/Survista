@@ -1,0 +1,18 @@
+
+html,body, #root {
+    height: 100%;
+}
+
+.fullPage {
+    height: 100;
+}
+
+.myHeader {
+    background-color: slategrey;
+    color: whitesmoke;
+    font-size: 35px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}

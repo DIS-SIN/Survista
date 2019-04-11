@@ -22,9 +22,6 @@ class SurveyModel(base.Model):
     magnitudeScore = Column('magnitude_score', Float(precision=2))
     questions = association_proxy("surveyQuestions", "question")
 
-    def __init__(self, **kwargs):
-        super(SurveyModel, self).__init__(**kwargs)
-
 
 class SurveyQuestionsModel(base.Model):
     __tablename__ = "survey_questions"
@@ -39,10 +36,18 @@ class SurveyQuestionsModel(base.Model):
                                    onupdate="CASCADE"),
                         primary_key=True)
     addedOn = Column('added_on', DateTime, server_default=utcnow())
-    survey = relationship("SurveyModel", backref=backref(
-        "surveyQuestions", passive_deletes=True), uselist=False)
-    question = relationship("QuestionModel", backref=backref(
-        "surveyQuestions", passive_deletes=True), uselist=False)
+    survey = relationship("SurveyModel",
+                          backref=backref(
+                              "surveyQuestions",
+                              passive_deletes=True,
+                              cascade="all, delete-orphan"),
+                          uselist=False)
+    question = relationship("QuestionModel",
+                            backref=backref(
+                                "surveyQuestions",
+                                passive_deletes=True,
+                                cascade="all, delete-orphan"),
+                            uselist=False)
 
     def __init__(self, survey=None, question=None, **kwargs):
         super(SurveyQuestionsModel, self).__init__(**kwargs)

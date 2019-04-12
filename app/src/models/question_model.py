@@ -12,13 +12,17 @@ class QuestionModel(base.Model):
     slug = Column(Text, nullable=False, unique=True)
     question = Column(Text, nullable=False, unique=True)
     addedOn = Column("added_on", DateTime, server_default=utcnow())
+    updatedOn = Column("updated_on", DateTime,
+                       server_default=utcnow(),
+                       onupdate=utcnow())
     questionTypeId = Column("question_type_id", Integer,
                             ForeignKey("question_types.id",
                                        ondelete="SET NULL",
                                        onupdate="CASCADE"))
     questionType = relationship("QuestionTypeModel",
                                 backref=backref("questions",
-                                                passive_deletes=True),
+                                                passive_deletes=True,
+                                                cascade="all"),
                                 uselist=False)
     surveys = association_proxy("surveyQuestions", "survey")
 

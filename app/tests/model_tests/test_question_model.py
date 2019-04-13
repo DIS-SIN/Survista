@@ -136,3 +136,107 @@ def test_update_row():
         }]).one_or_none()
         assert updated_row.slug == "test_question_7"
         assert updated_row.updatedOn > updated_row.addedOn
+
+
+def test_delete_row():
+    app = create_app(mode="development",
+                     static_path='../static',
+                     instance_path='../instance',
+                     templates_path='../templates')
+    with app.app_context():
+        from src.database.db import get_db, close_db
+        from sqltills import read_rows, delete_rows
+        from src.models.question_model import QuestionModel
+
+        # test deleting a row from the questions db
+        current_sess = get_db()
+        test_question_7 = read_rows(current_sess, QuestionModel, [{
+            'slug': {
+                'comparitor': '==',
+                'data': 'test_question_7'
+            }
+        }]).one_or_none()
+        assert test_question_7 is not None
+        delete_rows(current_sess, QuestionModel, [{
+            'slug': {
+                'comparitor': '==',
+                'data': 'test_question_7'
+            }
+        }])
+        close_db()
+        assert get_db() != current_sess
+        current_sess = get_db()
+        test_question_7 = read_rows(current_sess, QuestionModel, [{
+            'slug': {
+                'comparitor': '==',
+                'data': 'test_question_7'
+            }
+        }]).one_or_none()
+        assert test_question_7 is None
+
+
+def test_survey_relationship_creation():
+    """test the creation of a relationship between question and survey"""
+    app = create_app(mode="development",
+                     static_path='../static',
+                     instance_path='../instance',
+                     templates_path='../templates')
+    with app.app_context():
+        from src.database.db import get_db, close_db
+        from src.models.survey_model import SurveyModel, SurveyQuestionsModel
+        from src.models.question_model import QuestionModel
+        from sqltills import create_rows, read_rows
+
+        # test the creation of relationship between question and survey
+        # test the many to many outside the scope of the session
+        current_sess = get_db()
+        survey_1 = SurveyModel(title="Test Survey 1", slug="test_survey_1")
+        survey_2 = SurveyModel(title="Test Survey 2", slug="test_survey_2")
+        survey_3 = SurveyModel(title="Test Survey 3", slug="test_survey_3")
+        test_question_7 = QuestionModel(question="Test Question 7",
+                                        slug="test_question_7")
+        test_question_8 = QuestionModel(question="Test Question 8",
+                                        slug="test_question_8")
+        test_question_9 = QuestionModel(question="Test Question 9",
+                                        slug="test_question_9")
+        test_question_7.surveys.append(survey_1)
+        test_question_8.surveys.extend([survey_1, survey_2])
+        test_question_9.surveys.extend([survey_1, survey_2, survey_3])
+        create_rows(current_sess, test_question_7, test_question_8,
+                    test_question_9)
+        relationships = read_rows(current_sess, SurveyQuestionsModel).all()
+        assert len(relationships) == 6
+
+        # test the creation of relationships between question and survey
+        # test many to many inside the scope of the session
+        close_db()
+        assert current_sess != get_db()
+        current_sess = get_db()
+        questions = read_rows(current_sess, QuestionModel, filters=[{
+            'slug': {
+                'comparitor': '==',
+                'data': 'test_question_2'
+            },
+            'join': 'or'
+        },
+            {
+            'slug': {
+                'comparitor': '==',
+                'data': 'test_question_3'
+            },
+            'join': 'or'
+        },
+            {
+            'slug': {
+                'comparitor': '==',
+                'data': 'test_question_4'
+            }
+        }
+        ]).all()
+        assert len(questions) == 3
+        surveys = read_rows(current_sess, SurveyModel).all()
+        assert len(surveys) > 1
+        for question in questions:
+            for survey in surveys:
+                question.surveys.append(survey)
+        current_sess.commit()

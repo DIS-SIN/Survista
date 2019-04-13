@@ -1,11 +1,13 @@
-import React from 'react';
-import Header from './components/Header';
-import Main from './components/Main';
+import React from "react"
+
+import Header from  "./components/Header"
+import Jokes from "./components/Jokes";
+
 function App(){
-    return (
-        <div>
-            <Header/>
-            <Main/>
+    return(
+        <div className = "appContainer">
+           <Header />
+           <Jokes />
         </div>
     )
 }

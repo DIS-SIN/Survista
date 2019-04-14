@@ -1,5 +1,10 @@
 import pytest
 from src import create_app
+import os
+os.environ['SURVISTA_SQLALCHEMY_DATABASE_URI'] = "postgresql+psycopg2:" + \
+    "//postgres:password@" + \
+    "localhost:5432/" + \
+    "survista_test"
 
 
 def test_create_row():
@@ -9,7 +14,6 @@ def test_create_row():
     from sqlalchemy.exc import IntegrityError
 
     drop_and_create()
-
     app = create_app(mode="development",
                      static_path='../static',
                      instance_path='../instance',
@@ -182,6 +186,7 @@ def test_survey_relationship_creation():
                      instance_path='../instance',
                      templates_path='../templates')
     with app.app_context():
+        from sqlalchemy.exc import IntegrityError
         from src.database.db import get_db, close_db
         from src.models.survey_model import SurveyModel, SurveyQuestionsModel
         from src.models.question_model import QuestionModel
@@ -206,6 +211,17 @@ def test_survey_relationship_creation():
                     test_question_9)
         relationships = read_rows(current_sess, SurveyQuestionsModel).all()
         assert len(relationships) == 6
+        current_id = 1
+        for relation in relationships:
+            assert relation.id is not None
+            assert isinstance(relation.id, int)
+            assert current_id == relation.id
+            current_id += 1
+
+        # test the composite unique constraint
+        test_question_7.surveys.append(survey_1)
+        with pytest.raises(IntegrityError):
+            current_sess.commit()
 
         # test the creation of relationships between question and survey
         # test many to many inside the scope of the session
@@ -240,3 +256,7 @@ def test_survey_relationship_creation():
             for survey in surveys:
                 question.surveys.append(survey)
         current_sess.commit()
+
+
+def test_survey_relationship_update():
+    pass

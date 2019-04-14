@@ -2,9 +2,11 @@
 from sqlalchemy import (Column, BigInteger, Text, DateTime,
                         text, Float, ForeignKey)
 from sqlalchemy.orm import relationship, backref
+from sqlalchemy.schema import UniqueConstraint, Sequence
 from sqlalchemy.ext.associationproxy import association_proxy
 from .base_model import base
 from .utils.utc_convert import utcnow
+from .utils.primary_key_specifier import pkeyspec, SerialId
 
 
 class SurveyModel(base.Model):
@@ -25,6 +27,12 @@ class SurveyModel(base.Model):
 
 class SurveyQuestionsModel(base.Model):
     __tablename__ = "survey_questions"
+    # need to set a compile method to change this based on the db
+    id = Column(BigInteger,
+                Sequence('survey_questions_id_seq'),
+                primary_key=True,
+                server_default=pkeyspec(
+                    sequence="survey_questions_id_seq"))
     surveyId = Column('survey_id',
                       BigInteger,
                       ForeignKey('surveys.id', ondelete="CASCADE",
@@ -48,6 +56,8 @@ class SurveyQuestionsModel(base.Model):
                                 passive_deletes=True,
                                 cascade="all, delete-orphan"),
                             uselist=False)
+    __table_args__ = (UniqueConstraint('survey_id', 'question_id',
+                                       name="unique_survey_questions"),)
 
     def __init__(self, survey=None, question=None, **kwargs):
         super(SurveyQuestionsModel, self).__init__(**kwargs)

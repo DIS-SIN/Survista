@@ -198,17 +198,24 @@ def test_survey_relationship_creation():
         survey_1 = SurveyModel(title="Test Survey 1", slug="test_survey_1")
         survey_2 = SurveyModel(title="Test Survey 2", slug="test_survey_2")
         survey_3 = SurveyModel(title="Test Survey 3", slug="test_survey_3")
+        survey_4 = SurveyModel(title="Test Survey 4", slug="test_survey_4")
         test_question_7 = QuestionModel(question="Test Question 7",
                                         slug="test_question_7")
         test_question_8 = QuestionModel(question="Test Question 8",
                                         slug="test_question_8")
         test_question_9 = QuestionModel(question="Test Question 9",
                                         slug="test_question_9")
+        test_question_10 = QuestionModel(question="Test Question 10",
+                                         slug="test_question_10")
         test_question_7.surveys.append(survey_1)
         test_question_8.surveys.extend([survey_1, survey_2])
         test_question_9.surveys.extend([survey_1, survey_2, survey_3])
+        # test unique constraint out of session scope
+        test_question_10.surveys.extend([survey_4, survey_4])
         create_rows(current_sess, test_question_7, test_question_8,
                     test_question_9)
+        with pytest.raises(IntegrityError):
+            create_rows(current_sess, test_question_10)
         relationships = read_rows(current_sess, SurveyQuestionsModel).all()
         assert len(relationships) == 6
         current_id = 1
@@ -218,7 +225,7 @@ def test_survey_relationship_creation():
             assert current_id == relation.id
             current_id += 1
 
-        # test the composite unique constraint
+        # test the composite unique constraint in session scope
         test_question_7.surveys.append(survey_1)
         with pytest.raises(IntegrityError):
             current_sess.commit()
@@ -259,4 +266,48 @@ def test_survey_relationship_creation():
 
 
 def test_survey_relationship_update():
-    pass
+    app = create_app(mode="development",
+                     static_path='../static',
+                     instance_path='../instance',
+                     templates_path='../templates')
+    with app.app_context():
+        from src.database.db import get_db, close_db
+        from sqltills import update_rows
+        from src.models.question_model import QuestionModel
+
+        question = update_rows(get_db(), QuestionModel, {
+            'id': 101
+        },
+            filters=[
+            {
+                'slug': {
+                    'comparitor': '==',
+                    'data': 'test_question_9'
+                }
+            }
+        ])
+
+
+def test_survey_relationship_delete():
+    app = create_app(mode="development",
+                     static_path='../static',
+                     instance_path='../instance',
+                     templates_path='../templates')
+    with app.app_context():
+        from src.database.db import get_db, close_db
+        from sqltills import delete_row_by_id, read_rows
+        from src.models.question_model import QuestionModel
+
+        # test delete outside of session scope
+        delete_row_by_id(get_db(), QuestionModel, 101)
+
+        # test delete inside of session scope
+        question = read_rows(get_db(), QuestionModel, filters=[{
+            'slug': {
+                'comparitor': '==',
+                'data': 'test_question_8'
+            }
+        }]).one()
+
+        question.surveys.pop(0)
+        get_db().commit()

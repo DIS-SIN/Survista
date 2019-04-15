@@ -1,3 +1,13 @@
+"""
+Surveys have questions which is why we have the QuestionsModel. You will
+however see that we implemented a many to many relationship between
+surveys and questions. This is because a question can also be a part of
+many surveys. This allows us to relate the answers of questions accross
+the many surveys which it is a part of. Questions in different language
+are considered different however there is the ability to relate questions
+together
+"""
+
 import pytest
 from src import create_app
 import os

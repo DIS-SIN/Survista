@@ -1,4 +1,10 @@
-
+"""
+The role of the SurveyModel is to capture high level metadata
+around a survey. This metadata includes when the survey was
+first added to the database, it's language, the title ect. We
+are considering french and english serveys to be different surveys,
+there is the ability to relate different surveys together
+"""
 import pytest
 from src import create_app
 import os

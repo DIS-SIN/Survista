@@ -1,3 +1,10 @@
+"""
+A conducted survey (ConductedSurvey) is essentially a survey which has been
+sent out for responses. Do not confuse this for the SurveyModel. There is a
+one to many relationship between surveys (SurveyModel) and conducted surveys.
+To put it in plain english I can conduct a survey many times.
+The goal of the ConductedSurveyModel is to capture this. 
+"""
 from datetime import datetime
 import pytest
 from src import create_app

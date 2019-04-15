@@ -20,8 +20,6 @@ class SurveyModel(base.Model):
                        server_default=utcnow(),
                        onupdate=utcnow())
     language = Column(Text)
-    sentimentScore = Column('sentiment_score', Float(precision=2))
-    magnitudeScore = Column('magnitude_score', Float(precision=2))
     questions = association_proxy("surveyQuestions", "question")
 
 

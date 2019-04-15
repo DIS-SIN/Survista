@@ -3,6 +3,7 @@ from sqlalchemy import (Column, BigInteger, Text, DateTime,
 from sqlalchemy.orm import relationship, backref
 from .base_model import base
 from .utils.utc_convert import utcnow
+from sqlalchemy.schema import UniqueConstraint
 
 
 class ConductedSurveyModel(base.Model):
@@ -33,9 +34,16 @@ class ConductedSurveyQuestionModel(base.Model):
     id = Column(BigInteger, primary_key=True)
     surveyQuestionId = Column("survey_question_id",
                               BigInteger,
-                              ForeignKey('survey_questions.id'))
-    conductedQuestionId = Column("conducted_question_id",
-                                 BigInteger,
-                                 ForeignKey('conducted_surveys.id'))
+                              ForeignKey('survey_questions.id'),
+                              nullable=False)
+    conductedSurveyId = Column("conducted_question_id",
+                               BigInteger,
+                               ForeignKey('conducted_surveys.id'),
+                               nullable=False)
     addedOn = Column("added_on", DateTime,
                      server_default=utcnow())
+    __table_args__ = (UniqueConstraint(
+        "survey_question_id",
+        "conducted_question_id",
+        name="unique_conducted_survey_questions"
+    ),)

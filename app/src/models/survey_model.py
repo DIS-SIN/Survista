@@ -37,12 +37,12 @@ class SurveyQuestionsModel(base.Model):
                       BigInteger,
                       ForeignKey('surveys.id', ondelete="CASCADE",
                                  onupdate="CASCADE"),
-                      primary_key=True)
+                      nullable=False)
     questionId = Column('question_id',
                         BigInteger,
                         ForeignKey('questions.id', ondelete="CASCADE",
                                    onupdate="CASCADE"),
-                        primary_key=True)
+                        nullable=False)
     addedOn = Column('added_on', DateTime, server_default=utcnow())
     survey = relationship("SurveyModel",
                           backref=backref(

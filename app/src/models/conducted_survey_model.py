@@ -26,3 +26,16 @@ class ConductedSurveyModel(base.Model):
                                           cascade="all",
                                           passive_deletes=True),
                           uselist=False)
+
+
+class ConductedSurveyQuestionModel(base.Model):
+    __tablename__ = "conducted_survey_questions"
+    id = Column(BigInteger, primary_key=True)
+    surveyQuestionId = Column("survey_question_id",
+                              BigInteger,
+                              ForeignKey('survey_questions.id'))
+    conductedQuestionId = Column("conducted_question_id",
+                                 BigInteger,
+                                 ForeignKey('conducted_surveys.id'))
+    addedOn = Column("added_on", DateTime,
+                     server_default=utcnow())

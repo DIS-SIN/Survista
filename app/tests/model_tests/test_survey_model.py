@@ -1,6 +1,11 @@
 
 import pytest
 from src import create_app
+import os
+os.environ['SURVISTA_SQLALCHEMY_DATABASE_URI'] = "postgresql+psycopg2:" + \
+    "//postgres:password@" + \
+    "localhost:5432/" + \
+    "survista_test"
 
 
 def test_create_row():

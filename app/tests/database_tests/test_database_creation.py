@@ -72,11 +72,17 @@ def test_application_database_creation():
 
     from src.models.question_model import QuestionModel, QuestionTypeModel
     from src.models.survey_model import SurveyModel, SurveyQuestionsModel
+    from src.models.conducted_survey_model import (
+        ConductedSurveyModel,
+        ConductedSurveyQuestionModel
+    )
 
     assert QuestionModel.__tablename__ in tables
     assert QuestionTypeModel.__tablename__ in tables
     assert SurveyModel.__tablename__ in tables
     assert SurveyQuestionsModel.__tablename__ in tables
+    assert ConductedSurveyModel.__tablename__ in tables
+    assert ConductedSurveyQuestionModel.__tablename__ in tables
 
     cur.close()
     connection.close()

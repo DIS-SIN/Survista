@@ -27,12 +27,7 @@ class SurveyModel(base.Model):
 
 class SurveyQuestionsModel(base.Model):
     __tablename__ = "survey_questions"
-    # need to set a compile method to change this based on the db
-    id = Column(BigInteger,
-                Sequence('survey_questions_id_seq'),
-                primary_key=True,
-                server_default=pkeyspec(
-                    sequence="survey_questions_id_seq"))
+    id = Column(BigInteger, primary_key=True)
     surveyId = Column('survey_id',
                       BigInteger,
                       ForeignKey('surveys.id', ondelete="CASCADE",

@@ -35,30 +35,80 @@ def test_create_row():
                                         question="Test Question 1")
         test_survey_1.questions.append(test_question_1)
         create_rows(current_sess, test_question_1)
-        survey_question = read_rows(current_sess, SurveyQuestionsModel,
-                                    filters=[{
-                                        'surveyId': {
-                                            'comparitor': '==',
-                                            'data': test_survey_1.id
-                                        },
-                                        'join': 'and'
-                                    },
-                                        {
-                                        'questionId': {
-                                            'comparitor': '==',
-                                            'data': test_question_1.id
-                                        }
-                                    }]).one()
+        survey_question_1 = read_rows(current_sess, SurveyQuestionsModel,
+                                      filters=[{
+                                          'surveyId': {
+                                              'comparitor': '==',
+                                              'data': test_survey_1.id
+                                          },
+                                          'join': 'and'
+                                      },
+                                          {
+                                          'questionId': {
+                                              'comparitor': '==',
+                                              'data': test_question_1.id
+                                          }
+                                      }]).one()
         conducted_survey_1 = ConductedSurveyModel(slug="conducted_survey_1",
                                                   conductedOn=datetime(2019, 4,
                                                                        21))
         create_rows(current_sess, conducted_survey_1)
         cs_question_1 = ConductedSurveyQuestionModel(
-            surveyQuestionId=survey_question.id,
-            conductedQuestionId=conducted_survey_1.id)
+            surveyQuestionId=survey_question_1.id,
+            conductedSurveyId=conducted_survey_1.id)
         create_rows(current_sess, cs_question_1)
         assert cs_question_1.addedOn is not None
 
         # test not null constraint of surveyQuestionId
+        cs_question_2 = ConductedSurveyQuestionModel(
+            conductedSurveyId=conducted_survey_1.id)
+        with pytest.raises(IntegrityError):
+            create_rows(current_sess, cs_question_2)
+        test_question_2 = QuestionModel(slug="test_question_2",
+                                        question="Test Question 2")
+        test_survey_1.questions.append(test_question_2)
+        current_sess.commit()
+        survey_question_2 = read_rows(current_sess, SurveyQuestionsModel,
+                                      filters=[
+                                          {
+                                              'surveyId': {
+                                                  'comparitor': '==',
+                                                  'data': test_survey_1.id
+                                              },
+                                              'join': 'and'
+                                          },
+                                          {
+                                              'questionId': {
+                                                  'comparitor': '==',
+                                                  'data': test_question_2.id
+                                              }
+                                          }
+                                      ]).one()
+        cs_question_2.surveyQuestionId = survey_question_2.id
+        create_rows(current_sess, survey_question_2)
+
         # test not null constraint of conductedSurveyId
+        cs_question_3 = ConductedSurveyQuestionModel(
+            surveyQuestionId=survey_question_2.id
+        )
+        with pytest.raises(IntegrityError):
+            create_rows(current_sess, cs_question_3)
+        conducted_survey_2 = ConductedSurveyModel(
+            slug="conducted_survey_2",
+            conductedOn=datetime(2019, 4,
+                                 21)
+        )
+        create_rows(current_sess, conducted_survey_2)
+        cs_question_3.conductedSurveyId = conducted_survey_2.id
+        create_rows(current_sess, cs_question_3)
+
         # test unique composite unique constraint of both cols
+        cs_question_4 = ConductedSurveyQuestionModel(
+            conductedSurveyId=conducted_survey_1.id,
+            surveyQuestionId=survey_question_1.id
+        )
+        with pytest.raises(IntegrityError):
+            create_rows(current_sess, cs_question_4)
+        cs_question_4.conductedSurveyId = conducted_survey_2.id
+        cs_question_4.surveyQuestionId = survey_question_1.id
+        create_rows(current_sess, cs_question_4)

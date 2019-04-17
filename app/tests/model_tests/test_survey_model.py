@@ -1,9 +1,13 @@
+from sqltills import *
+from datetime import datetime
 """
 The role of the SurveyModel is to capture high level metadata
 around a survey. This metadata includes when the survey was
 first added to the database, it's language, the title ect. We
 are considering french and english serveys to be different surveys,
-there is the ability to relate different surveys together
+there is the ability to relate different surveys together through the
+survey_associations (SurveyAssociationsModel) mapper model between two
+surveys and the survey_association_reasons (SurveyAssociationReasonsModel).
 """
 import pytest
 from src import create_app
@@ -15,7 +19,39 @@ os.environ['SURVISTA_SQLALCHEMY_DATABASE_URI'] = "postgresql+psycopg2:" + \
 
 
 def test_create_row():
-    """test the creation of the row in the surveys table"""
+    """
+    Test the creation of the row in the surveys table
+
+    Test Criteria
+    --------------
+    1- status: Satisfied
+      The SurveyModel object must be able to be able instatiated with
+      the following attributes as arguments
+          - language
+          - title
+          - slug
+    2- status: Satisfied
+      The language attribute must not be empty when adding and commiting
+      the object to the database
+    3- status: Satisfied
+      The title attribute must not be empty when adding and commiting
+      the object to the database
+    4- status: Satisfied
+      a- status: Satisfied
+         The slug attribute must not be empty when adding and committing
+         the object to the database.
+      b- status: Satisfied
+         The slug attribute must be unique
+         from what is currently in the database. The slug should be a
+         maximum of 20 characters
+    5- status: Satisfied
+      When added and committed to the database the id field should
+      be automatically generated with the unique primary key
+    6- status: Satisfied
+      When added and committed to the database the addedOn field
+      should be automatically generated with the date and time
+      in UTC according to when it was added to the database
+    """
 
     from .utils.refresh_schema import drop_and_create
     from sqlalchemy.orm.session import make_transient
@@ -29,51 +65,81 @@ def test_create_row():
                      instance_path='../instance')
 
     with app.app_context():
-
-        from src.database.db import init_db
+        from src.database.db import init_db, get_db
         init_db(app)
+        current_session = get_db()
+
+        # Testing Criteria 1
         from src.models.survey_model import SurveyModel
+        new_survey_1 = SurveyModel(
+            slug="test_survey_1",
+            language="en",
+            title="Test Survey 1")
+        create_rows(current_session, new_survey_1)
 
-        # instantiating a new SurveModel rows with data
-        # Using constructor arguments
-        new_model = SurveyModel(title="TestSurvey1", slug="test_survey_1",
-                                language='en')
+        # Testing Criteria 5
+        assert new_survey_1.id == 1
 
-        # creating the row on the database
-        from sqltills import create_rows
-        from src.database.db import get_db
-        create_rows(get_db(), new_model)
+        # Testing Criteria 6
+        assert new_survey_1.addedOn is not None
+        assert isinstance(new_survey_1.addedOn, datetime)
+        assert new_survey_1.addedOn < datetime.utcnow()
 
-        old_session = get_db()
-        # closing the session using the close_db method
-        from src.database.db import close_db
-        close_db()
-        # test to see that the new session
-        # is not the same as the closed session
-        assert old_session != get_db()
-
-        # testing reading of the data from created row in the database
-        from sqltills import read_rows
-        row = read_rows(get_db(), SurveyModel).one()
-        assert row.title == "TestSurvey1"
-        assert row.slug == "test_survey_1"
-        assert row.language == "en"
-        assert row.addedOn == row.updatedOn
-
-        # transitioning the initially created instance to the transient state
-        make_transient(new_model)
-
-        # checking to ensure defined constraints are honoured
+        # Testing Criteria 2
+        new_survey_2 = SurveyModel(
+            slug="test_survey_2",
+            title="Test Survey 2"
+        )
         with pytest.raises(IntegrityError):
-            create_rows(get_db(), new_model)
+            create_rows(current_session, new_survey_2)
+        new_survey_2.language = "fr"
+        create_rows(current_session, new_survey_2)
 
-        # testing to ensure constraints work properly
-        new_model.slug = "test_survey_2"
-        new_model.title = "TestSurvey1"
-        create_rows(get_db(), new_model)
+        # Testing Criteria 3
+        new_survey_3 = SurveyModel(
+            slug="test_survey_3",
+            language="en"
+        )
+        with pytest.raises(IntegrityError):
+            create_rows(current_session, new_survey_3)
+        new_survey_3.title = "Test Survey 3"
+        create_rows(current_session, new_survey_3)
+
+        # Testing Criteria 4 a
+        new_survey_4 = SurveyModel(
+            title="Test Survey 4",
+            language="fr"
+        )
+        with pytest.raises(IntegrityError):
+            create_rows(current_session, new_survey_4)
+        new_survey_4.slug = "test_survey_4"
+        create_rows(current_session, new_survey_4)
+
+        # Testing Criteria 4 b
+        new_survey_5 = SurveyModel(
+            slug="test_survey_4",
+            title="Test Survey 5",
+            language="en"
+        )
+        with pytest.raises(IntegrityError):
+            create_rows(current_session, new_survey_5)
+        new_survey_5.slug = "test_survey_5"
+        create_rows(current_session, new_survey_5)
 
 
 def test_delete_row():
+    """
+    Testing deleting row from surveys table
+
+    TESTING CRITERIA
+    ----------------
+    1-
+       Must be able to delete a survey outside of a session
+       context
+    2- Must be able to delete a survey when loaded in session
+       context
+    """
+    from sqlalchemy import inspect
 
     app = create_app(mode='development',
                      static_path='../static',
@@ -81,33 +147,78 @@ def test_delete_row():
                      instance_path='../instance')
     with app.app_context():
         from src.models.survey_model import SurveyModel
-        from src.database.db import get_db
-        from sqltills import delete_rows, read_rows
+        from src.database.db import get_db, close_db
 
-        res = read_rows(get_db(), SurveyModel, filters=[{
-            'slug': {
-                'comparitor': '==',
-                'data': 'test_survey_2'
-            }
-        }]).one_or_none()
-
-        assert res is not None
-
-        delete_rows(get_db(), SurveyModel, filters=[{
-            'slug': {
-                'comparitor': '==',
-                'data': 'test_survey_2'
-            }
-        }])
-
-        res = read_rows(get_db(), SurveyModel, filters=[{
-            'slug': {
-                'comparitor': '==',
-                'data': 'test_survey_2'
-            }
-        }]).one_or_none()
-
-        assert res is None
+        # Testing Criteria 1
+        current_session = get_db()
+        test_survey_5 = read_rows(
+            current_session,
+            SurveyModel,
+            filters=[
+                {
+                    'slug': {
+                        'comparitor': '==',
+                        'data': 'test_survey_5'
+                    }
+                }
+            ]
+        ).one()
+        assert test_survey_5 is not None
+        close_db()
+        old_session = current_session
+        current_session = get_db()
+        assert current_session != old_session
+        delete_rows(
+            current_session,
+            SurveyModel,
+            filters=[
+                {
+                    'slug': {
+                        'comparitor': '==',
+                        'data': 'test_survey_5'
+                    }
+                }
+            ]
+        )
+        test_survey_5 = read_rows(
+            current_session,
+            SurveyModel,
+            filters=[
+                {
+                    'slug': {
+                        'comparitor': '==',
+                        'data': 'test_survey_5'
+                    }
+                }
+            ]
+        ).one_or_none()
+        assert test_survey_5 is None
+        # Testing Criteria 2
+        test_survey_4 = read_rows(
+            current_session,
+            SurveyModel,
+            filters=[
+                {
+                    'slug': {
+                        'comparitor': '==',
+                        'data': 'test_survey_4'
+                    }
+                }
+            ]
+        ).one()
+        delete_rows(
+            current_session,
+            SurveyModel,
+            filters=[
+                {
+                    'slug': {
+                        'comparitor': '==',
+                        'data': 'test_survey_4'
+                    }
+                }
+            ]
+        )
+        assert inspect(test_survey_4).detached is True
 
 
 def test_update_row():

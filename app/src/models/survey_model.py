@@ -14,12 +14,12 @@ class SurveyModel(base.Model):
     id = Column(BigInteger, primary_key=True)
     slug = Column(Text, nullable=False, unique=True)
     title = Column(Text, nullable=False)
+    language = Column(Text, nullable=False)
     addedOn = Column(DateTime,
                      server_default=utcnow())
     updatedOn = Column(DateTime,
                        server_default=utcnow(),
                        onupdate=utcnow())
-    language = Column(Text)
     questions = association_proxy("surveyQuestions", "question")
 
 

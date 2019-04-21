@@ -18,6 +18,34 @@ os.environ['SURVISTA_SQLALCHEMY_DATABASE_URI'] = "postgresql+psycopg2:" + \
 
 
 def test_create_row():
+    """
+    test the creation of a row in the questions table
+
+    TESTING CRITERIA 
+    -----------------
+    1-
+      Must be able to instatiate the QuestionModel object with
+      the following arguments
+           - slug
+           - question
+           - language
+    2-
+       When adding and commiting the rows to the database the id
+       field should automatically be generated based upon the next
+       integer primary key in the table 
+    3-
+       When adding and commiting the rows to the database the addedOn
+       field should automatically be generated based upon the UTC
+       date and time to when the row was added to the database
+    3-
+      a-
+        When adding and committing the rows to the database the slug
+        attribute must not be null
+      b-
+        When adding and committing the rows to the datebase the slug
+        attribute must be unique from what is currently in the database
+      
+    """
 
     from .utils.refresh_schema import drop_and_create
     from sqlalchemy.orm.session import make_transient
@@ -37,11 +65,12 @@ def test_create_row():
         # testing instatiating a QuestionModel object
         # testing inserting created QuestionModel object in db
         from src.models.question_model import QuestionModel, QuestionTypeModel
-        current_sess = get_db()
-        new_question = QuestionModel(slug="test_question_1",
-                                     question="Test Question")
-        new_question_2 = QuestionModel(slug="test_question_3",
-                                       question="Test Question 3")
+        current_session = get_db()
+        test_question_1 = QuestionModel(
+                slug="test_question_1",
+                question="Test Question 1",
+                language="en"
+        )
         q_type = read_rows(current_sess, QuestionTypeModel).first()
         new_question.questionType = q_type
         new_question_2.questionType = q_type

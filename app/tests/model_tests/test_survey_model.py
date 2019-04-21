@@ -222,6 +222,20 @@ def test_delete_row():
 
 
 def test_update_row():
+    """
+    test updating a survey row
+    
+    TESTING CRITERIA
+    ----------------
+    1 - 
+      When updating a survey row the updatedOn 
+      attribute should be generated with the UTC
+      date and time when the survey was updated
+    2 - 
+      When updating a survey row if the object
+      is already loaded within the current scope
+      of the session it should also be updated
+    """
 
     app = create_app(mode='development',
                      static_path='../static',
@@ -231,27 +245,38 @@ def test_update_row():
         from src.models.survey_model import SurveyModel
         from src.database.db import get_db, close_db
         from sqltills import read_rows, update_rows
+        
+        # Test Criteria 1 and 2
+        current_session = get_db()
+        test_survey_3 = read_rows(
+            current_session, 
+            SurveyModel,
+            filters=[
+                {
+                    'slug': {
+                        'comparitor': '==',
+                        'data': 'test_survey_3'
+                    }
+                }
+            ]).one()
+        assert test_survey_3.language == "en"
+        update_rows(
+            current_session,
+            SurveyModel,
+            {'language' :'fr'},
+            filters=[
+                {
+                    'slug': {
+                        'comparitor': '==',
+                        'data': 'test_survey_3'
+                    }
+                }
+            ]
+        )
+        assert test_survey_3.language == "fr"
+        assert test_survey_3.updatedOn > test_survey_3.addedOn
 
-        update_rows(get_db(), SurveyModel,
-                    {'slug': 'test_survey_2', 'language': 'fr'},
-                    [{
-                        'slug': {
-                            'comparitor': '==',
-                            'data': 'test_survey_1'
-                        }
-                    }])
 
-        close_db()
-
-        res = read_rows(get_db(), SurveyModel, filters=[{
-            'slug': {
-                'comparitor': '==',
-                'data': 'test_survey_2'
-            }
-        }]).one_or_none()
-
-        assert res is not None
-        assert res.updatedOn > res.addedOn
 
 
 def test_question_relationship_creation():

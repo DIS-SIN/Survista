@@ -69,7 +69,7 @@ def create_app(mode="production",
     if not os.path.isabs(static_path):
         static_path = os.path.abspath(static_path)
     if not os.path.isdir(static_path):
-        raise FileNotFoundError('static folder was not able to be found')
+        raise FileNotFoundError(f'static folder was not able to be found {static_pATH}')
 
     app.static_folder = static_path
 

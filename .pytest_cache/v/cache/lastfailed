@@ -1,6 +1,0 @@
-{
-  "app/tests/database_tests/test_database_creation.py": true,
-  "app/tests/model_tests/test_conducted_survey_model.py": true,
-  "app/tests/model_tests/test_conducted_survey_questions_model.py": true,
-  "app/tests/model_tests/test_survey_model.py": true
-}

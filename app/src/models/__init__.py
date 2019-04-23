@@ -1,10 +1,7 @@
 
 def init_base(app):
-    from .base_model import base
-    base.init_app(app)
-    from .conducted_survey_model import (
-        ConductedSurveyModel,
-        ConductedSurveyQuestionModel
-    )
-    from .question_model import QuestionModel, QuestionTypeModel
-    from .survey_model import SurveyModel, SurveyQuestionsModel
+    from neomodel import config
+    config.DATABASE_URL = app.config['NEOMODEL_DATABASE_URI']
+    from .survey_model import Survey
+    from .question_model import Question
+    from .conducted_survey_model import ConductedSurvey

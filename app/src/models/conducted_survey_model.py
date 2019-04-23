@@ -1,0 +1,31 @@
+from neomodel.contrib import SemiStructuredNode
+from neomodel import(
+    StringProperty,
+    UniqueIdProperty,
+    IntegerProperty,
+    DateTimeProperty,
+    FloatProperty
+)
+import datetime
+
+
+class ConductedSurvey(SemiStructuredNode):
+
+    conductedSurveyId = UniqueIdProperty()
+    slug = StringProperty(unique_index=True)
+    title = StringProperty(required=True)
+    language = StringProperty(
+        required=True,
+        choices={'en': 'English', 'fr': 'French'})
+    addedOn = DateTimeProperty(default_now=True)
+    conductedOn = DateTimeProperty(required=True)
+    updatedOn = DateTimeProperty(default_now=True)
+    sentimentScore = FloatProperty()
+    magnitudeScore = FloatProperty()
+
+    def pre_save(self):
+        self.updatedOn = datetime.datetime.utcnow()
+        if self.sentimentScore is None and self.magnitudeScore is None:
+            self.sentimentCalculated = False
+        self.sentimentScore = self.sentimentScore or 0
+        self.magnitudeScore = self.sentimentScore or 0

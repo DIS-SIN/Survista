@@ -4,3 +4,4 @@
 **/.ipynb_checkpoints/*
 /survista-venv/*
 /stuff/*
+**/.pytest_cache/

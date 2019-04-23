@@ -1,15 +1,15 @@
+from flask import Flask
 
 
 def create_app(mode="production",
                static_path="./static",
                templates_path="./templates",
-               instance_path="./instance"):
-    from flask import Flask
+               instance_path="./instance") -> Flask:
     import os
     # from .utils.celery_maker import make_celery
     # from .utils.fileChecker import fileChecker
     from .utils.verify_user_constrains import verify
-    from src.database.db import init_app, init_db
+    from src.database.db import init_app, distroy_db, init_db
     from warnings import warn
     from werkzeug.utils import ImportStringError
     app = Flask(__name__)
@@ -47,29 +47,31 @@ def create_app(mode="production",
     elif os.environ.get('SURVISTA_SECRET_KEY') is not None:
         app.config['SECRET_KEY'] = os.environ['SURVISTA_SECRET_KEY']
 
-    if app.config.get("SQLALCHEMY_DATABASE_URI") is None \
+    if app.config.get("NEOMODEL_DATABASE_URI") is None \
             or mode == "production":
-        if os.environ.get('SURVISTA_SQLALCHEMY_DATABASE_URI') is None:
+        if os.environ.get('SURVISTA_NEOMODEL_DATABASE_URI') is None:
             if mode == "production":
                 raise ValueError(
-                    "SURVISTA_SQLALCHEMY_DATABASE_URI must be set as an " +
+                    "SURVISTA_NEOMODEL_DATABASE_URI must be set as an " +
                     "environment variable for production environments")
             else:
                 raise ValueError(
-                    "SQLALCHEMY_DATABAST_URI was not set in the settings " +
+                    "NEOMODEL_DATABASE_URI was not set in the settings " +
                     "thus must be provided in the " +
-                    "SURIVITA_SQLALCHEMY_DATABASE_URI environment variable")
+                    "SURIVISTA_NEOMODEL_DATABASE_URI environment variable")
 
-        app.config['SQLALCHEMY_DATABASE_URI'] = \
-            os.environ['SURVISTA_SQLALCHEMY_DATABASE_URI']
-    elif os.environ.get("SURVISTA_SQLALCHEMY_DATABASE_URI") is not None:
-        app.config['SQLALCHEMY_DATABASE_URI'] = \
-            os.environ['SURVISTA_SQLALCHEMY_DATABASE_URI']
+        app.config['NEOMODEL_DATABASE_URI'] = \
+            os.environ['SURVISTA_NEOMODEL_DATABASE_URI']
+    elif os.environ.get("SURVISTA_NEOMODEL_DATABASE_URI") is not None:
+        app.config['NEOMODEL_DATABASE_URI'] = \
+            os.environ['SURVISTA_NEOMODEL_DATABASE_URI']
 
     if not os.path.isabs(static_path):
         static_path = os.path.abspath(static_path)
     if not os.path.isdir(static_path):
-        raise FileNotFoundError(f'static folder was not able to be found {static_pATH}')
+        raise FileNotFoundError(
+            f'static folder was not able to be found {static_path}'
+        )
 
     app.static_folder = static_path
 
@@ -89,9 +91,13 @@ def create_app(mode="production",
 
     init_app(app)
 
-    @app.cli.command("initdb")
+    @app.cli.command("init-db")
     def initialise_database():
         init_db(app)
+
+    @app.cli.command("teardown-db")
+    def distroy_database():
+        distroy_db(app)
 
     # Celery configuration area
     return app

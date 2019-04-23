@@ -1,410 +1,164 @@
-from sqltills import *
-from datetime import datetime
-"""
-The role of the SurveyModel is to capture high level metadata
-around a survey. This metadata includes when the survey was
-first added to the database, it's language, the title ect. We
-are considering french and english serveys to be different surveys,
-there is the ability to relate different surveys together through the
-survey_associations (SurveyAssociationsModel) mapper model between two
-surveys and the survey_association_reasons (SurveyAssociationReasonsModel).
-"""
 import pytest
 from src import create_app
-import os
-os.environ['SURVISTA_SQLALCHEMY_DATABASE_URI'] = "postgresql+psycopg2:" + \
-    "//postgres:password@" + \
-    "localhost:5432/" + \
-    "survista_test"
+from datetime import datetime
 
 
-def test_create_row():
-    """
-    Test the creation of the row in the surveys table
+class Test_Survey_Model_CRUD():
+    app = create_app(mode="development",
+                     static_path="../static",
+                     templates_path="../templates",
+                     instance_path="../instance")
 
-    Test Criteria
-    --------------
-    1- status: Satisfied
-      The SurveyModel object must be able to be able instatiated with
-      the following attributes as arguments
-          - language
-          - title
-          - slug
-    2- status: Satisfied
-      The language attribute must not be empty when adding and commiting
-      the object to the database
-    3- status: Satisfied
-      The title attribute must not be empty when adding and commiting
-      the object to the database
-    4- status: Satisfied
-      a- status: Satisfied
-         The slug attribute must not be empty when adding and committing
-         the object to the database.
-      b- status: Satisfied
-         The slug attribute must be unique
-         from what is currently in the database. The slug should be a
-         maximum of 20 characters
-    5- status: Satisfied
-      When added and committed to the database the id field should
-      be automatically generated with the unique primary key
-    6- status: Satisfied
-      When added and committed to the database the addedOn field
-      should be automatically generated with the date and time
-      in UTC according to when it was added to the database
-    """
+    def test_create_node(self):
+        with self.app.app_context():
+            from src.database.db import get_db, distroy_db, init_db
+            distroy_db(self.app)
+            init_db(self.app)
+            from src.models.survey_model import Survey
+            transaction_factory = get_db()
+            current_transaction = transaction_factory.transaction
+            with current_transaction:
+                from src.models.survey_model import Survey
+                new_survey = Survey(title="Test Survey 1",
+                                    slug="test_survey_1",
+                                    language="en")
+                new_survey.save()
 
-    from .utils.refresh_schema import drop_and_create
-    from sqlalchemy.orm.session import make_transient
-    from sqlalchemy.exc import IntegrityError
+            node = transaction_factory.cypher_query(
+                "MATCH (s:Survey) RETURN s")
+            assert new_survey.title == node[0][0][0]._properties['title']
+            assert isinstance(new_survey.addedOn, datetime)
+            assert isinstance(new_survey.updatedOn, datetime)
+            pytest.survey_last_updatedOn = new_survey.updatedOn
 
-    # resetting database
-    drop_and_create()
-    app = create_app(mode='development',
-                     static_path='../static',
-                     templates_path='../templates',
-                     instance_path='../instance')
+    def test_language_required_constraint(self):
+        with self.app.app_context():
+            from src.database.db import get_db
+            from neomodel.exceptions import RequiredProperty
+            from src.models.survey_model import Survey
+            transaction_factory = get_db()
+            current_transaction = transaction_factory.transaction
+            with pytest.raises(RequiredProperty):
+                with current_transaction:
+                    new_survey = Survey(title="Test Survey 2",
+                                        slug="test_survey_2")
+                    new_survey.save()
+            current_transaction = transaction_factory.transaction
+            with current_transaction:
+                new_survey.language = "en"
+                new_survey.save()
 
-    with app.app_context():
-        from src.database.db import init_db, get_db
-        init_db(app)
-        current_session = get_db()
+    def test_language_options_constraint(self):
+        with self.app.app_context():
+            from src.database.db import get_db
+            from src.models.survey_model import Survey
+            from neomodel.exception import DeflateError
+            current_transaction = get_db().transaction
+            with pytest.raises(DeflateError):
+                with current_transaction:
+                    new_survey = Survey(title="Test Survey 3",
+                                        slug="test_survey_3",
+                                        language="Japanese")
+                    new_survey.save()
+            current_transaction = get_db().transaction
+            with current_transaction:
+                new_survey.language = "en"
+                new_survey.save()
+            current_transaction = get_db().transaction
+            with current_transaction:
+                test_survey_4 = Survey(
+                    title="Test Survey 4",
+                    slug="test_survey_4",
+                    language="fr"
+                )
+                test_survey_4.save()
 
-        # Testing Criteria 1
-        from src.models.survey_model import SurveyModel
-        new_survey_1 = SurveyModel(
-            slug="test_survey_1",
-            language="en",
-            title="Test Survey 1")
-        create_rows(current_session, new_survey_1)
+    def test_title_required_constraint(self):
+        with self.app.app_context():
+            from src.database.db import get_db
+            from src.models.survey_model import Survey
+            from neomodel.exceptions import RequiredProperty
 
-        # Testing Criteria 5
-        assert new_survey_1.id == 1
+            current_transaction = get_db().transaction
+            with pytest.raises(RequiredProperty):
+                with current_transaction:
+                    test_survey_5 = Survey(
+                        slug="test_survey_5",
+                        language="en"
+                    )
+                    test_survey_5.save()
 
-        # Testing Criteria 6
-        assert new_survey_1.addedOn is not None
-        assert isinstance(new_survey_1.addedOn, datetime)
-        assert new_survey_1.addedOn < datetime.utcnow()
+            current_transaction = get_db().transaction
+            with current_transaction:
+                test_survey_5.title = "Test Survey 5"
+                test_survey_5.save()
 
-        # Testing Criteria 2
-        new_survey_2 = SurveyModel(
-            slug="test_survey_2",
-            title="Test Survey 2"
-        )
-        with pytest.raises(IntegrityError):
-            create_rows(current_session, new_survey_2)
-        new_survey_2.language = "fr"
-        create_rows(current_session, new_survey_2)
+    def test_slug_required_constrain(self):
+        with self.app.app_context():
+            from src.database.db import get_db
+            from src.models.survey_model import Survey
+            from neomodel.exceptions import RequiredProperty
 
-        # Testing Criteria 3
-        new_survey_3 = SurveyModel(
-            slug="test_survey_3",
-            language="en"
-        )
-        with pytest.raises(IntegrityError):
-            create_rows(current_session, new_survey_3)
-        new_survey_3.title = "Test Survey 3"
-        create_rows(current_session, new_survey_3)
+            current_transaction = get_db().transaction
+            with pytest.raises(RequiredProperty):
+                with current_transaction:
+                    test_survey_6 = Survey(
+                        title="Test survey 6",
+                        language="en"
+                    )
+                    test_survey_6.save()
 
-        # Testing Criteria 4 a
-        new_survey_4 = SurveyModel(
-            title="Test Survey 4",
-            language="fr"
-        )
-        with pytest.raises(IntegrityError):
-            create_rows(current_session, new_survey_4)
-        new_survey_4.slug = "test_survey_4"
-        create_rows(current_session, new_survey_4)
+            current_transaction = get_db().transaction
+            with current_transaction:
+                test_survey_6.slug = "test_survey_6"
+                test_survey_6.save()
 
-        # Testing Criteria 4 b
-        new_survey_5 = SurveyModel(
-            slug="test_survey_4",
-            title="Test Survey 5",
-            language="en"
-        )
-        with pytest.raises(IntegrityError):
-            create_rows(current_session, new_survey_5)
-        new_survey_5.slug = "test_survey_5"
-        create_rows(current_session, new_survey_5)
+    def test_slug_unique_constrain(self):
+        with self.app.app_context():
+            from src.database.db import get_db
+            from src.models.survey_model import Survey
+            from neomodel.exceptions import UniqueProperty
 
+            current_transaction = get_db().transaction
+            with pytest.raises(UniqueProperty):
+                with current_transaction:
+                    test_survey_6 = Survey(
+                        slug="test_survey_6",
+                        title="Test survey 7",
+                        language="en"
+                    )
+                    test_survey_6.save()
 
-def test_delete_row():
-    """
-    Testing deleting row from surveys table
+            current_transaction = get_db().transaction
+            with current_transaction:
+                test_survey_6.slug = "test_survey_7"
+                test_survey_6.save()
 
-    TESTING CRITERIA
-    ----------------
-    1-
-       Must be able to delete a survey outside of a session
-       context
-    2- Must be able to delete a survey when loaded in session
-       context
-    """
-    from sqlalchemy import inspect
+    def test_update_node(self):
+        with self.app.app_context():
+            from src.database.db import get_db
+            from src.models.survey_model import Survey
+            current_transation = get_db().transaction
+            with current_transation:
+                test_survey_1 = Survey.nodes.get(slug="test_survey_1")
+                test_survey_1.title = "Test Survey 1 Updated"
+                test_survey_1.save()
 
-    app = create_app(mode='development',
-                     static_path='../static',
-                     templates_path='../templates',
-                     instance_path='../instance')
-    with app.app_context():
-        from src.models.survey_model import SurveyModel
-        from src.database.db import get_db, close_db
+            updatedNode = get_db().cypher_query(
+                "MATCH (s:Survey {slug: 'test_survey_1'}) RETURN s")
+            assert test_survey_1.title == \
+                updatedNode[0][0][0]._properties['title']
+            assert test_survey_1.updatedOn > pytest.survey_last_updatedOn
 
-        # Testing Criteria 1
-        current_session = get_db()
-        test_survey_5 = read_rows(
-            current_session,
-            SurveyModel,
-            filters=[
-                {
-                    'slug': {
-                        'comparitor': '==',
-                        'data': 'test_survey_5'
-                    }
-                }
-            ]
-        ).one()
-        assert test_survey_5 is not None
-        close_db()
-        old_session = current_session
-        current_session = get_db()
-        assert current_session != old_session
-        delete_rows(
-            current_session,
-            SurveyModel,
-            filters=[
-                {
-                    'slug': {
-                        'comparitor': '==',
-                        'data': 'test_survey_5'
-                    }
-                }
-            ]
-        )
-        test_survey_5 = read_rows(
-            current_session,
-            SurveyModel,
-            filters=[
-                {
-                    'slug': {
-                        'comparitor': '==',
-                        'data': 'test_survey_5'
-                    }
-                }
-            ]
-        ).one_or_none()
-        assert test_survey_5 is None
-        # Testing Criteria 2
-        test_survey_4 = read_rows(
-            current_session,
-            SurveyModel,
-            filters=[
-                {
-                    'slug': {
-                        'comparitor': '==',
-                        'data': 'test_survey_4'
-                    }
-                }
-            ]
-        ).one()
-        delete_rows(
-            current_session,
-            SurveyModel,
-            filters=[
-                {
-                    'slug': {
-                        'comparitor': '==',
-                        'data': 'test_survey_4'
-                    }
-                }
-            ]
-        )
-        assert inspect(test_survey_4).detached is True
+    def test_delete_node(self):
+        with self.app.app_context():
+            from src.database.db import get_db
+            from src.models.survey_model import Survey
+            current_transaction = get_db().transaction
+            with current_transaction:
+                Survey.nodes.get(slug="test_survey_1").delete()
 
-
-def test_update_row():
-    """
-    test updating a survey row
-    
-    TESTING CRITERIA
-    ----------------
-    1 - 
-      When updating a survey row the updatedOn 
-      attribute should be generated with the UTC
-      date and time when the survey was updated
-    2 - 
-      When updating a survey row if the object
-      is already loaded within the current scope
-      of the session it should also be updated
-    """
-
-    app = create_app(mode='development',
-                     static_path='../static',
-                     templates_path='../templates',
-                     instance_path='../instance')
-    with app.app_context():
-        from src.models.survey_model import SurveyModel
-        from src.database.db import get_db, close_db
-        from sqltills import read_rows, update_rows
-        
-        # Test Criteria 1 and 2
-        current_session = get_db()
-        test_survey_3 = read_rows(
-            current_session, 
-            SurveyModel,
-            filters=[
-                {
-                    'slug': {
-                        'comparitor': '==',
-                        'data': 'test_survey_3'
-                    }
-                }
-            ]).one()
-        assert test_survey_3.language == "en"
-        update_rows(
-            current_session,
-            SurveyModel,
-            {'language' :'fr'},
-            filters=[
-                {
-                    'slug': {
-                        'comparitor': '==',
-                        'data': 'test_survey_3'
-                    }
-                }
-            ]
-        )
-        assert test_survey_3.language == "fr"
-        assert test_survey_3.updatedOn > test_survey_3.addedOn
-
-
-
-
-def test_question_relationship_creation():
-    """test the many and many between surveys and questions"""
-    app = create_app(mode='development',
-                     static_path='../static',
-                     templates_path='../templates',
-                     instance_path='../instance')
-
-    with app.app_context():
-        from src.database.db import get_db
-        from src.models.survey_model import (SurveyModel,
-                                             SurveyQuestionsModel)
-        from src.models.question_model import (QuestionModel,
-                                               QuestionTypeModel)
-        from sqltills import create_rows, read_rows, update_rows
-
-        q_type = read_rows(get_db(), QuestionTypeModel).first()
-        new_question = QuestionModel(slug="test_question_1",
-                                     question="Test Question 1")
-        new_question.questionType = q_type
-
-        survey = read_rows(get_db(), SurveyModel).first()
-
-        survey.questions.append(new_question)
-
-        get_db().commit()
-
-
-def test_question_relationship_update():
-    app = create_app(mode='development',
-                     static_path='../static',
-                     templates_path='../templates',
-                     instance_path='../instance')
-    with app.app_context():
-        from src.database.db import get_db
-        from sqltills import update_rows, read_rows
-        from src.models.survey_model import SurveyModel
-
-        update_rows(get_db(), SurveyModel, {'id': 2}, [{
-            'slug': {
-                'comparitor': '==',
-                'data': 'test_survey_2'
-            }
-        }])
-
-        update_rows(get_db(), SurveyModel, {'id': 1}, [{
-            'slug': {
-                'comparitor': '==',
-                'data': 'test_survey_2'
-            }
-        }])
-
-        survey = read_rows(get_db(), SurveyModel).first()
-
-        question = survey.questions[0]
-
-        survey.id = 3
-
-        assert question.surveys[0].id == 3
-        get_db().commit()
-
-        survey.id = 1
-
-        get_db().commit()
-
-
-def test_question_relationship_delete():
-    app = create_app(mode='development',
-                     static_path='../static',
-                     templates_path='../templates',
-                     instance_path='../instance')
-    with app.app_context():
-        from src.database.db import get_db
-        from sqltills import read_rows, delete_rows
-        from src.models.survey_model import SurveyModel, SurveyQuestionsModel
-
-        survey = read_rows(get_db(), SurveyModel).first()
-
-        question = survey.questions.pop(0)
-
-        get_db().commit()
-
-        assert read_rows(get_db(),
-                         SurveyQuestionsModel).one_or_none() is None
-
-        survey.questions.append(question)
-
-        get_db().commit()
-
-        assert (read_rows(get_db(), SurveyQuestionsModel).one_or_none()
-                is not None)
-
-        delete_rows(get_db(), SurveyModel)
-
-
-def test_many_survey_one_question():
-    app = create_app(mode='development',
-                     static_path='../static',
-                     templates_path='../templates',
-                     instance_path='../instance')
-    with app.app_context():
-        from sqltills import delete_rows, read_rows, create_rows
-        from src.database.db import get_db, close_db
-        from src.models.question_model import QuestionModel, QuestionTypeModel
-        from src.models.survey_model import SurveyModel
-
-        # initially create the survey rows and close the session
-        survey_1 = SurveyModel(title="TestSurvey1", slug="test_survey_1",
-                               language='en')
-        survey_2 = SurveyModel(title="TestSurvey2", slug="test_survey_2",
-                               language='en')
-        survey_3 = SurveyModel(title="TestSurvey3", slug="test_survey_3",
-                               language='en')
-        create_rows(get_db(), survey_1, survey_2, survey_3)
-
-        question = read_rows(get_db(), QuestionModel).first()
-
-        survey_1.questions.append(question)
-        survey_2.questions.append(question)
-        survey_3.questions.append(question)
-
-        get_db().commit()
-
-        delete_rows(get_db(), SurveyModel, [{
-            'slug': {
-                'comparitor': '==',
-                'data': 'test_survey_1'
-            }
-        }])
-        delete_rows(get_db(), QuestionModel)
+            deletedNode = get_db().cypher_query(
+                "MATCH (s:Survey {slug: 'test_survey_1'}) RETURN s"
+            )
+            assert not deletedNode[0]

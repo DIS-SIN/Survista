@@ -14,12 +14,19 @@ class ConductedSurvey(SemiStructuredNode):
     conductedSurveyId = UniqueIdProperty()
     slug = StringProperty(unique_index=True)
     title = StringProperty(required=True)
-    language = StringProperty(
-        required=True,
-        choices={'en': 'English', 'fr': 'French'})
     addedOn = DateTimeProperty(default_now=True)
-    conductedOn = DateTimeProperty(required=True)
+    completedOn = DateTimeProperty(required=True)
     updatedOn = DateTimeProperty(default_now=True)
+    respondentId = StringProperty(required=True)
+    token = StringProperty(required=True, unique_index=True)
+    status = StringProperty(
+                            default="active", 
+                            choices={
+                                "closed": "closed",
+                                "active": "active",
+                                "abandoned": "abandoned"
+                                }
+                            )
     sentimentScore = FloatProperty()
     magnitudeScore = FloatProperty()
 

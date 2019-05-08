@@ -12,7 +12,13 @@ class Test_Application_Database_Config_Initialisation():
         assert config.DATABASE_URL == app.config['NEOMODEL_DATABASE_URI']
         from neomodel import db
         from src.models.survey_model import Survey
+        from src.models.conducted_survey_model import ConductedSurvey
+        from src.models.question_model import Question
+        from src.models.conducted_survey_question_model import ConductedSurveyQuestion
         assert Survey in db._NODE_CLASS_REGISTRY.values()
+        assert Question in db._NODE_CLASS_REGISTRY.values()
+        assert ConductedSurvey in db._NODE_CLASS_REGISTRY.values()
+        assert ConductedSurveyQuestion in db._NODE_CLASS_REGISTRY.values()
 
 
 class Test_Database_Creation_Deletion():
@@ -31,6 +37,9 @@ class Test_Database_Creation_Deletion():
             labels = [lab[0] for lab in db.cypher_query("CALL db.labels")[0]]
 
             assert "Survey" in labels
+            assert "Question" in labels
+            assert "ConductedSurvey" in labels
+            assert "ConductedSurveyQuestion" in labels
     
     def test_database_deletion(self):
         from src import create_app

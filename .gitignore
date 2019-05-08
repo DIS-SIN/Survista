@@ -2,6 +2,7 @@
 **/.vscode/
 /app/instance/*
 **/.ipynb_checkpoints/*
-/survista-venv/*
+/survista-venv/
 /stuff/*
 **/.pytest_cache/
+**/.mypy_cache/

@@ -5,3 +5,4 @@ def init_base(app):
     from .survey_model import Survey
     from .question_model import Question
     from .conducted_survey_model import ConductedSurvey
+    from .conducted_survey_question_model import ConductedSurveyQuestion

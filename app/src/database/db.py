@@ -27,7 +27,7 @@ def close_db(e=None):
 def init_app(app: Flask):
     # register the close_db with the removal of the app context event
     app.teardown_appcontext(close_db)
-    # init_base is used to initialise the global SQLAlchemy
+    # init_base is used to initialise the NeoModel config
     init_base(app)
 
 

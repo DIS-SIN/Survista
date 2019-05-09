@@ -4,11 +4,10 @@ from neomodel import(
     UniqueIdProperty,
     IntegerProperty,
     DateTimeProperty,
-    FloatProperty
+    BooleanProperty
 )
 import datetime
-
-
+from .utils.sentimentSetter import SentimentSetter
 class ConductedSurvey(SemiStructuredNode):
 
     conductedSurveyId = UniqueIdProperty()
@@ -27,12 +26,9 @@ class ConductedSurvey(SemiStructuredNode):
                                 "abandoned": "abandoned"
                                 }
                             )
-    sentimentScore = FloatProperty()
-    magnitudeScore = FloatProperty()
-
+    sentimentSet = BooleanProperty(default= False)
     def pre_save(self):
         self.updatedOn = datetime.datetime.utcnow()
-        if self.sentimentScore is None and self.magnitudeScore is None:
-            self.sentimentCalculated = False
-        self.sentimentScore = self.sentimentScore or 0
-        self.magnitudeScore = self.sentimentScore or 0
+        if self.sentimentSet is False:
+            SentimentSetter.setSentimentVariables(self)
+                

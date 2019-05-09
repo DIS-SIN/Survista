@@ -14,11 +14,11 @@ class Test_Application_Database_Config_Initialisation():
         from src.models.survey_model import Survey
         from src.models.conducted_survey_model import ConductedSurvey
         from src.models.question_model import Question
-        from src.models.conducted_survey_question_model import ConductedSurveyQuestion
+        from src.models.answers_model import Answer
         assert Survey in db._NODE_CLASS_REGISTRY.values()
         assert Question in db._NODE_CLASS_REGISTRY.values()
         assert ConductedSurvey in db._NODE_CLASS_REGISTRY.values()
-        assert ConductedSurveyQuestion in db._NODE_CLASS_REGISTRY.values()
+        assert Answer in db._NODE_CLASS_REGISTRY.values()
 
 
 class Test_Database_Creation_Deletion():

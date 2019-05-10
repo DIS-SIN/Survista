@@ -3,6 +3,7 @@
 /app/instance/*
 **/.ipynb_checkpoints/*
 /survista-venv/
+/venv
 /stuff/*
 **/.pytest_cache/
 **/.mypy_cache/

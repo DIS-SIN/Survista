@@ -4,7 +4,7 @@ from datetime import datetime
 
 
 class Question(SemiStructuredNode):
-    questionId = UniqueIdProperty()
+    nodeId = UniqueIdProperty()
     question = StringProperty(required=True)
     slug = StringProperty(unique_index=True)
     language = StringProperty(required=True, choices={

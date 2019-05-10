@@ -18,18 +18,25 @@ class Test_Question_Model_CRUD():
             transaction_factory = get_db()
             current_transaction = transaction_factory.transaction
             with current_transaction:
-                new_question = Question(question="Test Question 1",
+                test_question_1 = Question(question="Test Question 1",
                                         slug="test_question_1",
                                         language="en")
-                new_question.save()
+                test_question_1.save()
+            pytest.test_question_1 = test_question_1
+    
+    def test_nodeId_field_is_generated(self):
+        assert pytest.test_question_1.nodeId is not None
 
-            node = transaction_factory.cypher_query(
-                "MATCH (q:Question) RETURN q")
-            assert new_question.question ==\
-                node[0][0][0]._properties['question']
-            assert isinstance(new_question.addedOn, datetime)
-            assert isinstance(new_question.updatedOn, datetime)
-            pytest.question_last_updatedOn = new_question.updatedOn
+    def test_addedOn_field_is_datetime(self):
+        assert pytest.test_question_1.addedOn is not None
+        assert isinstance(pytest.test_question_1.addedOn, datetime)
+
+    def test_updatedOn_field_is_datetime(self):
+        assert pytest.test_question_1.updatedOn is not None
+        assert isinstance(pytest.test_question_1.updatedOn, datetime)
+    
+    def test_addedOn_field_is_equal_to_updatedOn_field_on_creation(self):
+        assert pytest.test_question_1.addedOn == pytest.test_question_1.updatedOn
 
     def test_language_required_constraint(self):
         with self.app.app_context():
@@ -40,14 +47,14 @@ class Test_Question_Model_CRUD():
             current_transaction = transaction_factory.transaction
             with pytest.raises(RequiredProperty):
                 with current_transaction:
-                    new_question = Question(question="Test Question 2",
+                    test_question_2 = Question(question="Test Question 2",
                                             slug="test_question_2")
-                    new_question.save()
-            current_transaction = transaction_factory.transaction
+                    test_question_2.save()
             with current_transaction:
-                new_question.language = "en"
-                new_question.save()
-
+                test_question_2.language = "en"
+                test_question_2.save()
+    # TODO
+    # Fix the rest of the tests
     def test_language_options_constraint(self):
         with self.app.app_context():
             from src.database.db import get_db

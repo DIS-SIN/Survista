@@ -19,14 +19,12 @@ class Test_Survey_Model_CRUD():
             current_transaction = transaction_factory.transaction
             with current_transaction:
                 from src.models.survey_model import Survey
-                new_survey = Survey(title="Test Survey 1",
+                test_survey_1 = Survey(title="Test Survey 1",
                                     slug="test_survey_1",
                                     language="en")
-                new_survey.save()
+                test_survey_1.save()
 
-            node = transaction_factory.cypher_query(
-                "MATCH (s:Survey) RETURN s")
-            assert new_survey.title == node[0][0][0]._properties['title']
+            assert new_survey.nodeId is not None
             assert isinstance(new_survey.addedOn, datetime)
             assert isinstance(new_survey.updatedOn, datetime)
             pytest.survey_last_updatedOn = new_survey.updatedOn

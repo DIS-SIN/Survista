@@ -1,16 +1,30 @@
 from neomodel.contrib import SemiStructuredNode
-from neomodel import UniqueIdProperty, StringProperty, DateTimeProperty
+from neomodel import (
+    UniqueIdProperty,
+    StringProperty,
+    DateTimeProperty,
+    BooleanProperty
+)
 from datetime import datetime
+import pytz
 
 
 class Question(SemiStructuredNode):
+
     nodeId = UniqueIdProperty()
-    question = StringProperty(required=True)
     slug = StringProperty(unique_index=True)
     language = StringProperty(required=True, choices={
-                              'en': 'English', 'fr': 'French'})
+                              'en': 'English',
+                              'fr': 'French'
+                            }
+                        )
     addedOn = DateTimeProperty(default_now=True)
-    updatedOn = DateTimeProperty(default_now=True)
 
-    def pre_save(self):
-        self.updatedOn = datetime.utcnow()
+class QuestionVersion(SemiStructuredNode):
+
+    nodeId = UniqueIdProperty()
+    question = StringProperty(required=True)
+    currentVersion = BooleanProperty(default=False)
+    addedOn = DateTimeProperty(default_now=True)
+
+

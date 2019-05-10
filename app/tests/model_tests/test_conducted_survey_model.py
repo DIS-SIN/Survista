@@ -19,7 +19,7 @@ class Test_ConductedSurvey_Model_CRUD():
             current_transaction = transaction_factory.transaction
             with current_transaction:
                 from src.models.conducted_survey_model import ConductedSurvey
-                new_conducted_survey = ConductedSurvey(
+                test_conducted_survey_1 = ConductedSurvey(
                     title="Test ConductedSurvey 1",
                     slug="test_conducted_survey_1",
                     completedOn=datetime(2019, 4, 21),
@@ -27,12 +27,24 @@ class Test_ConductedSurvey_Model_CRUD():
                     token="some_other_hash_1",
                     status="closed"
                 )
-                new_conducted_survey.save()
+                test_conducted_survey_1.save()
+
+            pytest.test_conducted_survey_1 = test_conducted_survey_1
             assert new_conducted_survey.nodeId is not None
             assert isinstance(new_conducted_survey.addedOn, datetime)
             assert isinstance(new_conducted_survey.updatedOn, datetime)
             pytest.conducted_survey_last_updatedOn = \
                 new_conducted_survey.updatedOn
+
+    def test_nodeId_field_is_generated(self):
+        assert pytest.test_conducted_survey_1.nodeId is not None
+    
+    def test_addedOn_field_is_datetime(self):
+        assert pytest.test_conducted_survey_1.addedOn is not None
+        assert isinstance(pytest.test_conducted_survey_1.addedOn, datetime)
+    
+    def test_addedOn_field_is_equal_to_updatedOn_field_on_creation(self):
+        assert pytest.test_conducted_survey_1.addedOn == pytest.test_conducted_survey_1.updatedOn
 
     def test_title_required_constraint(self):
         with self.app.app_context():
@@ -43,42 +55,18 @@ class Test_ConductedSurvey_Model_CRUD():
             current_transaction = get_db().transaction
             with pytest.raises(RequiredProperty):
                 with current_transaction:
-                    test_conducted_survey_5 = ConductedSurvey(
-                        slug="test_conducted_survey_5",
+                    test_conducted_survey_2 = ConductedSurvey(
+                        slug="test_conducted_survey_2",
                         completedOn=datetime(2019, 4, 21),
                         respondentId="some_hash",
                         token="some_other_hash_2",
                         status="closed"
                     )
-                    test_conducted_survey_5.save()
+                    test_conducted_survey_2.save()
 
-            current_transaction = get_db().transaction
             with current_transaction:
-                test_conducted_survey_5.title = "Test ConductedSurvey 5"
-                test_conducted_survey_5.save()
-
-    def test_slug_required_constrain(self):
-        with self.app.app_context():
-            from src.database.db import get_db
-            from src.models.conducted_survey_model import ConductedSurvey
-            from neomodel.exceptions import RequiredProperty
-
-            current_transaction = get_db().transaction
-            with pytest.raises(RequiredProperty):
-                with current_transaction:
-                    test_conducted_survey_6 = ConductedSurvey(
-                        title="Test conducted_survey 6",
-                        completedOn=datetime(2019, 4, 21),
-                        respondentId="some_hash",
-                        token="some_other_hash_3",
-                        status="closed"
-                    )
-                    test_conducted_survey_6.save()
-
-            current_transaction = get_db().transaction
-            with current_transaction:
-                test_conducted_survey_6.slug = "test_conducted_survey_6"
-                test_conducted_survey_6.save()
+                test_conducted_survey_2.title = "Test ConductedSurvey 2"
+                test_conducted_survey_2.save()
 
     def test_slug_unique_constrain(self):
         with self.app.app_context():
@@ -89,20 +77,19 @@ class Test_ConductedSurvey_Model_CRUD():
             current_transaction = get_db().transaction
             with pytest.raises(UniqueProperty):
                 with current_transaction:
-                    test_conducted_survey_7 = ConductedSurvey(
-                        slug="test_conducted_survey_6",
-                        title="Test conducted_survey 7",
+                    test_conducted_survey_4 = ConductedSurvey(
+                        slug="test_conducted_survey_3",
+                        title="Test conducted_survey 4",
                         completedOn=datetime(2019, 4, 21),
                         respondentId="some_hash",
                         token="some_other_hash_4",
                         status="closed"
                     )
-                    test_conducted_survey_7.save()
+                    test_conducted_survey_4.save()
 
-            current_transaction = get_db().transaction
             with current_transaction:
-                test_conducted_survey_7.slug = "test_conducted_survey_7"
-                test_conducted_survey_7.save()
+                test_conducted_survey_4.slug = "test_conducted_survey_4"
+                test_conducted_survey_4.save()
 
     def test_respondantId_required_contraint(self):
         with self.app.app_context():
@@ -112,17 +99,18 @@ class Test_ConductedSurvey_Model_CRUD():
             current_transaction = get_db().transaction
             with pytest.raises(RequiredProperty):
                 with current_transaction:
-                    test_conducted_survey_8 = ConductedSurvey(
-                        slug="test_conducted_survey_8",
-                        title="Test conducted_survey 8",
+                    test_conducted_survey_5 = ConductedSurvey(
+                        slug="test_conducted_survey_5",
+                        title="Test conducted survey 5",
                         completedOn=datetime(2019, 4, 21),
                         token="some_other_hash_5",
                         status="closed"
                     )
-                    test_conducted_survey_8.save()
+                    test_conducted_survey_5.save()
+
             with current_transaction:
-                test_conducted_survey_8.respondentId = "some-hash"
-                test_conducted_survey_8.save()
+                test_conducted_survey_5.respondentId = "some-hash"
+                test_conducted_survey_5.save()
 
     def test_token_required_constraint(self):
         with self.app.app_context():
@@ -132,17 +120,18 @@ class Test_ConductedSurvey_Model_CRUD():
             current_transaction = get_db().transaction
             with pytest.raises(RequiredProperty):
                 with current_transaction:
-                    test_conducted_survey_9 = ConductedSurvey(
-                        slug="test_conducted_survey_9",
-                        title="test conducted_survey_9",
+                    test_conducted_survey_6 = ConductedSurvey(
+                        slug="test_conducted_survey_6",
+                        title="test conducted_survey_6",
                         completedOn=datetime(2019, 4, 21),
                         respondentId="some-hash",
                         status="closed"
                     )
-                    test_conducted_survey_9.save()
+                    test_conducted_survey_6.save()
+
             with current_transaction:
-                test_conducted_survey_9.token = "some_other_hash_6"
-                test_conducted_survey_9.save()
+                test_conducted_survey_6.token = "some_other_hash_6"
+                test_conducted_survey_6.save()
 
     def test_status_options_constraint(self):
         with self.app.app_context():

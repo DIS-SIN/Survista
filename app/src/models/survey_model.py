@@ -3,21 +3,29 @@ from neomodel import(
     StringProperty,
     UniqueIdProperty,
     IntegerProperty,
-    DateTimeProperty
+    DateTimeProperty,
+    BooleanProperty
 )
-import datetime
-
+from datetime import datetime
+import pytz
 
 class Survey(SemiStructuredNode):
 
     nodeId = UniqueIdProperty()
     slug = StringProperty(unique_index=True)
-    title = StringProperty(required=True)
     language = StringProperty(
         required=True,
-        choices={'en': 'English', 'fr': 'French'})
+        choices={
+            'en': 'English',
+            'fr': 'French'
+        }
+    )
     addedOn = DateTimeProperty(default_now=True)
-    updatedOn = DateTimeProperty(default_now=True)
 
-    def pre_save(self):
-        self.updatedOn = datetime.datetime.utcnow()
+
+class SurveyVersion(SemiStructuredNode):
+
+    nodeId = UniqueIdProperty()
+    title = StringProperty(required=True)
+    currentVersion = BooleanProperty(default=False)
+    addedOn = DateTimeProperty(default_now=True)

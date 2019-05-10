@@ -11,13 +11,10 @@ from .utils.sentimentSetter import SentimentSetter
 class ConductedSurvey(SemiStructuredNode):
 
     conductedSurveyId = UniqueIdProperty()
-    slug = StringProperty(unique_index=True)
     title = StringProperty(required=True)
     addedOn = DateTimeProperty(default_now=True)
     completedOn = DateTimeProperty(required=True)
     updatedOn = DateTimeProperty(default_now=True)
-    respondentId = StringProperty(required=True)
-    token = StringProperty(required=True, unique_index=True)
     status = StringProperty(
                             default="active", 
                             choices={

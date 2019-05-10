@@ -31,13 +31,6 @@ class Test_Question_Model_CRUD():
         assert pytest.test_question_1.addedOn is not None
         assert isinstance(pytest.test_question_1.addedOn, datetime)
 
-    def test_updatedOn_field_is_datetime(self):
-        assert pytest.test_question_1.updatedOn is not None
-        assert isinstance(pytest.test_question_1.updatedOn, datetime)
-    
-    def test_addedOn_field_is_equal_to_updatedOn_field_on_creation(self):
-        assert pytest.test_question_1.addedOn == pytest.test_question_1.updatedOn
-
     def test_language_required_constraint(self):
         with self.app.app_context():
             from src.database.db import get_db
@@ -53,8 +46,7 @@ class Test_Question_Model_CRUD():
             with current_transaction:
                 test_question_2.language = "en"
                 test_question_2.save()
-    # TODO
-    # Fix the rest of the tests
+
     def test_language_options_constraint(self):
         with self.app.app_context():
             from src.database.db import get_db
@@ -63,22 +55,17 @@ class Test_Question_Model_CRUD():
             current_transaction = get_db().transaction
             with pytest.raises(DeflateError):
                 with current_transaction:
-                    new_question = Question(question="Test Question 3",
+                    test_question_3 = Question(question="Test Question 3",
                                             slug="test_question_3",
                                             language="Japanese")
-                    new_question.save()
-            current_transaction = get_db().transaction
+                    test_question_3.save()
+        
             with current_transaction:
-                new_question.language = "en"
-                new_question.save()
-            current_transaction = get_db().transaction
-            with current_transaction:
-                test_question_4 = Question(
-                    question="Test Question 4",
-                    slug="test_question_4",
-                    language="fr"
-                )
-                test_question_4.save()
+                test_question_3.language = "en"
+                test_question_3.save()
+
+                test_question_3.language = "fr"
+                test_question_3.save()
 
     def test_question_required_constraint(self):
         with self.app.app_context():
@@ -89,16 +76,15 @@ class Test_Question_Model_CRUD():
             current_transaction = get_db().transaction
             with pytest.raises(RequiredProperty):
                 with current_transaction:
-                    test_question_5 = Question(
-                        slug="test_question_5",
+                    test_question_4 = Question(
+                        slug="test_question_4",
                         language="en",
                     )
-                    test_question_5.save()
+                    test_question_4.save()
 
-            current_transaction = get_db().transaction
             with current_transaction:
-                test_question_5.question = "Test Question 5"
-                test_question_5.save()
+                test_question_4.question = "Test Question 4"
+                test_question_4.save()
 
     def test_slug_required_constrain(self):
         with self.app.app_context():
@@ -109,16 +95,15 @@ class Test_Question_Model_CRUD():
             current_transaction = get_db().transaction
             with pytest.raises(RequiredProperty):
                 with current_transaction:
-                    test_question_6 = Question(
-                        question="Test question 6",
+                    test_question_5 = Question(
+                        question="Test question 5",
                         language="en"
                     )
-                    test_question_6.save()
+                    test_question_5.save()
 
-            current_transaction = get_db().transaction
             with current_transaction:
-                test_question_6.slug = "test_question_6"
-                test_question_6.save()
+                test_question_5.slug = "test_question_5"
+                test_question_5.save()
 
     def test_slug_unique_constrain(self):
         with self.app.app_context():
@@ -130,15 +115,15 @@ class Test_Question_Model_CRUD():
             with pytest.raises(UniqueProperty):
                 with current_transaction:
                     test_question_6 = Question(
-                        slug="test_question_6",
-                        question="Test question 7",
+                        slug="test_question_5",
+                        question="Test question 6",
                         language="en"
                     )
                     test_question_6.save()
 
             current_transaction = get_db().transaction
             with current_transaction:
-                test_question_6.slug = "test_question_7"
+                test_question_6.slug = "test_question_6"
                 test_question_6.save()
 
     def test_update_node(self):
@@ -151,11 +136,7 @@ class Test_Question_Model_CRUD():
                 test_question_1.title = "Test Question 1 Updated"
                 test_question_1.save()
 
-            updatedNode = get_db().cypher_query(
-                "MATCH (s:Question {slug: 'test_question_1'}) RETURN s")
-            assert test_question_1.title == \
-                updatedNode[0][0][0]._properties['title']
-            assert test_question_1.updatedOn > pytest.question_last_updatedOn
+            assert test_question_1.updatedOn > pytest.test_question_1.updatedOn
 
     def test_delete_node(self):
         with self.app.app_context():
@@ -169,3 +150,4 @@ class Test_Question_Model_CRUD():
                 "MATCH (s:Question {slug: 'test_question_1'}) RETURN s"
             )
             assert not deletedNode[0]
+

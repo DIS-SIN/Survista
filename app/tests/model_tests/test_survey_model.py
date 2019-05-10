@@ -14,6 +14,7 @@ class Test_Survey_Model_CRUD():
             from src.database.db import get_db, distroy_db, init_db
             distroy_db(self.app)
             init_db(self.app)
+
             from src.models.survey_model import Survey
             transaction_factory = get_db()
             current_transaction = transaction_factory.transaction
@@ -23,11 +24,18 @@ class Test_Survey_Model_CRUD():
                                     slug="test_survey_1",
                                     language="en")
                 test_survey_1.save()
+            
+            pytest.test_survey_1 = test_survey_1
 
-            assert new_survey.nodeId is not None
-            assert isinstance(new_survey.addedOn, datetime)
-            assert isinstance(new_survey.updatedOn, datetime)
-            pytest.survey_last_updatedOn = new_survey.updatedOn
+    def test_nodeId_field_is_generated(self):
+        assert pytest.test_survey_1.nodeId is not None
+    
+    def test_addedOn_field_is_datetime(self):
+        assert pytest.test_survey_1.addedOn is not None
+        assert isinstance(pytest.test_survey_1.addedOn, datetime)
+
+    def test_addedOn_field_is_equal_to_updatedOn_field_on_creation(self):
+        assert pytest.test_survey_1.updatedOn == pytest.test_survey_1.addedOn
 
     def test_language_required_constraint(self):
         with self.app.app_context():
@@ -38,13 +46,13 @@ class Test_Survey_Model_CRUD():
             current_transaction = transaction_factory.transaction
             with pytest.raises(RequiredProperty):
                 with current_transaction:
-                    new_survey = Survey(title="Test Survey 2",
-                                        slug="test_survey_2")
-                    new_survey.save()
+                    test_survey_2 = Survey(title="Test Survey 2",
+                                           slug="test_survey_2")
+                    test_survey_2.save()
             current_transaction = transaction_factory.transaction
             with current_transaction:
-                new_survey.language = "en"
-                new_survey.save()
+                test_survey_2.language = "en"
+                test_survey_2.save()
 
     def test_language_options_constraint(self):
         with self.app.app_context():
@@ -54,22 +62,17 @@ class Test_Survey_Model_CRUD():
             current_transaction = get_db().transaction
             with pytest.raises(DeflateError):
                 with current_transaction:
-                    new_survey = Survey(title="Test Survey 3",
-                                        slug="test_survey_3",
-                                        language="Japanese")
-                    new_survey.save()
-            current_transaction = get_db().transaction
+                    test_survey_3 = Survey(title="Test Survey 3",
+                                           slug="test_survey_3",
+                                           language="Japanese")
+                    test_survey_3.save()
+
             with current_transaction:
-                new_survey.language = "en"
-                new_survey.save()
-            current_transaction = get_db().transaction
-            with current_transaction:
-                test_survey_4 = Survey(
-                    title="Test Survey 4",
-                    slug="test_survey_4",
-                    language="fr"
-                )
-                test_survey_4.save()
+                test_survey_3.language = "en"
+                test_survey_3.save()
+                
+                test_survey_3.language = "fr"
+                test_survey_3.save()
 
     def test_title_required_constraint(self):
         with self.app.app_context():
@@ -80,16 +83,15 @@ class Test_Survey_Model_CRUD():
             current_transaction = get_db().transaction
             with pytest.raises(RequiredProperty):
                 with current_transaction:
-                    test_survey_5 = Survey(
-                        slug="test_survey_5",
+                    test_survey_4 = Survey(
+                        slug="test_survey_4",
                         language="en"
                     )
-                    test_survey_5.save()
+                    test_survey_4.save()
 
-            current_transaction = get_db().transaction
             with current_transaction:
-                test_survey_5.title = "Test Survey 5"
-                test_survey_5.save()
+                test_survey_4.title = "Test Survey 4"
+                test_survey_4.save()
 
     def test_slug_required_constrain(self):
         with self.app.app_context():
@@ -100,16 +102,15 @@ class Test_Survey_Model_CRUD():
             current_transaction = get_db().transaction
             with pytest.raises(RequiredProperty):
                 with current_transaction:
-                    test_survey_6 = Survey(
-                        title="Test survey 6",
+                    test_survey_5 = Survey(
+                        title="Test survey 5",
                         language="en"
                     )
-                    test_survey_6.save()
+                    test_survey_5.save()
 
-            current_transaction = get_db().transaction
             with current_transaction:
-                test_survey_6.slug = "test_survey_6"
-                test_survey_6.save()
+                test_survey_5.slug = "test_survey_5"
+                test_survey_5.save()
 
     def test_slug_unique_constrain(self):
         with self.app.app_context():
@@ -121,15 +122,15 @@ class Test_Survey_Model_CRUD():
             with pytest.raises(UniqueProperty):
                 with current_transaction:
                     test_survey_6 = Survey(
-                        slug="test_survey_6",
-                        title="Test survey 7",
+                        slug="test_survey_5",
+                        title="Test survey 6",
                         language="en"
                     )
                     test_survey_6.save()
 
             current_transaction = get_db().transaction
             with current_transaction:
-                test_survey_6.slug = "test_survey_7"
+                test_survey_6.slug = "test_survey_6"
                 test_survey_6.save()
 
     def test_update_node(self):
@@ -142,11 +143,7 @@ class Test_Survey_Model_CRUD():
                 test_survey_1.title = "Test Survey 1 Updated"
                 test_survey_1.save()
 
-            updatedNode = get_db().cypher_query(
-                "MATCH (s:Survey {slug: 'test_survey_1'}) RETURN s")
-            assert test_survey_1.title == \
-                updatedNode[0][0][0]._properties['title']
-            assert test_survey_1.updatedOn > pytest.survey_last_updatedOn
+            assert test_survey_1.updatedOn > pytest.test_survey_1.updatedOn
 
     def test_delete_node(self):
         with self.app.app_context():

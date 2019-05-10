@@ -10,7 +10,7 @@ import datetime
 
 class Survey(SemiStructuredNode):
 
-    surveyId = UniqueIdProperty()
+    nodeId = UniqueIdProperty()
     slug = StringProperty(unique_index=True)
     title = StringProperty(required=True)
     language = StringProperty(

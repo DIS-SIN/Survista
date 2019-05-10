@@ -28,11 +28,7 @@ class Test_ConductedSurvey_Model_CRUD():
                     status="closed"
                 )
                 new_conducted_survey.save()
-
-            node = transaction_factory.cypher_query(
-                "MATCH (s:ConductedSurvey) RETURN s")
-            assert new_conducted_survey.title == \
-                node[0][0][0]._properties['title']
+            assert new_conducted_survey.nodeId is not None
             assert isinstance(new_conducted_survey.addedOn, datetime)
             assert isinstance(new_conducted_survey.updatedOn, datetime)
             pytest.conducted_survey_last_updatedOn = \

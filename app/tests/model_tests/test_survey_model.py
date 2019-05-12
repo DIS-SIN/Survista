@@ -3,7 +3,7 @@ from src import create_app
 from datetime import datetime
 
 
-class Test_Survey_Model_CRUD():
+class Test_Survey_Model_CRD():
     app = create_app(mode="development",
                      static_path="../static",
                      templates_path="../templates",
@@ -33,9 +33,6 @@ class Test_Survey_Model_CRUD():
     def test_addedOn_field_is_datetime(self):
         assert pytest.test_survey_1.addedOn is not None
         assert isinstance(pytest.test_survey_1.addedOn, datetime)
-
-    def test_addedOn_field_is_equal_to_updatedOn_field_on_creation(self):
-        assert pytest.test_survey_1.updatedOn == pytest.test_survey_1.addedOn
 
     def test_language_required_constraint(self):
         with self.app.app_context():
@@ -73,25 +70,6 @@ class Test_Survey_Model_CRUD():
                 
                 test_survey_3.language = "fr"
                 test_survey_3.save()
-
-    def test_title_required_constraint(self):
-        with self.app.app_context():
-            from src.database.db import get_db
-            from src.models.survey_model import Survey
-            from neomodel.exceptions import RequiredProperty
-
-            current_transaction = get_db().transaction
-            with pytest.raises(RequiredProperty):
-                with current_transaction:
-                    test_survey_4 = Survey(
-                        slug="test_survey_4",
-                        language="en"
-                    )
-                    test_survey_4.save()
-
-            with current_transaction:
-                test_survey_4.title = "Test Survey 4"
-                test_survey_4.save()
 
     def test_slug_required_constrain(self):
         with self.app.app_context():
@@ -133,18 +111,6 @@ class Test_Survey_Model_CRUD():
                 test_survey_6.slug = "test_survey_6"
                 test_survey_6.save()
 
-    def test_update_node(self):
-        with self.app.app_context():
-            from src.database.db import get_db
-            from src.models.survey_model import Survey
-            current_transation = get_db().transaction
-            with current_transation:
-                test_survey_1 = Survey.nodes.get(slug="test_survey_1")
-                test_survey_1.title = "Test Survey 1 Updated"
-                test_survey_1.save()
-
-            assert test_survey_1.updatedOn > pytest.test_survey_1.updatedOn
-
     def test_delete_node(self):
         with self.app.app_context():
             from src.database.db import get_db
@@ -157,3 +123,48 @@ class Test_Survey_Model_CRUD():
                 "MATCH (s:Survey {slug: 'test_survey_1'}) RETURN s"
             )
             assert not deletedNode[0]
+
+class Test_SurveyVersion_Model_CRD:
+    app = create_app(mode="development",
+                     static_path="../static",
+                     templates_path="../templates",
+                     instance_path="../instance")
+
+    def test_create_node(self):
+        with self.app.app_context():
+            from src.database.db import get_db, distroy_db, init_db
+            from src.models.survey_model import SurveyVersion
+            distroy_db(self.app)
+            init_db(self.app)
+            current_transaction = get_db().transaction
+
+            with current_transaction:
+                test_survey_version_1 = SurveyVersion(
+                    title="Survey Version 1"
+                )
+                test_survey_version_1.save()
+            
+            pytest.test_survey_version_1 = test_survey_version_1
+    
+    def test_nodeId_field_is_generated(self):
+        assert pytest.test_survey_version_1.nodeId is not None
+    
+    def test_currentVersion_field_is_default_false(self):
+        assert pytest.test_survey_version_1.currentVersion is False
+
+    def test_title_required_constraint(self):
+        with self.app.app_context():
+            from src.database.db import get_db
+            from src.models.survey_model import SurveyVersion
+            from neomodel.exceptions import RequiredProperty
+
+            current_transaction = get_db().transaction
+            with pytest.raises(RequiredProperty):
+                with current_transaction:
+                    test_survey_version_2 = SurveyVersion(
+                    )
+                    test_survey_version_2.save()
+
+            with current_transaction:
+                test_survey_version_2.title = "Survey Version 2"
+                test_survey_version_2.save()

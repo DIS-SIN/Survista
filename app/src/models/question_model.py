@@ -6,8 +6,6 @@ from neomodel import (
     BooleanProperty
 )
 from datetime import datetime
-import pytz
-
 
 class Question(SemiStructuredNode):
 
@@ -25,6 +23,6 @@ class QuestionVersion(SemiStructuredNode):
     nodeId = UniqueIdProperty()
     question = StringProperty(required=True)
     currentVersion = BooleanProperty(default=False)
-    addedOn = DateTimeProperty(default_now=True)
+
 
 

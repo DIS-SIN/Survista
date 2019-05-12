@@ -28,4 +28,3 @@ class SurveyVersion(SemiStructuredNode):
     nodeId = UniqueIdProperty()
     title = StringProperty(required=True)
     currentVersion = BooleanProperty(default=False)
-    addedOn = DateTimeProperty(default_now=True)

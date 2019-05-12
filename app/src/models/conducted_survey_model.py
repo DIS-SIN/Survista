@@ -6,15 +6,16 @@ from neomodel import(
     DateTimeProperty,
     BooleanProperty
 )
-import datetime
+from typing import Optional
+from datetime import datetime
+import pytz
 from .utils.sentimentSetter import SentimentSetter
 class ConductedSurvey(SemiStructuredNode):
 
-    conductedSurveyId = UniqueIdProperty()
-    title = StringProperty(required=True)
+    nodeId = UniqueIdProperty()
     addedOn = DateTimeProperty(default_now=True)
-    completedOn = DateTimeProperty(required=True)
-    updatedOn = DateTimeProperty(default_now=True)
+    updatedOn = DateTimeProperty()
+    closedOn = DateTimeProperty(default_now=True)
     status = StringProperty(
                             default="active", 
                             choices={
@@ -25,7 +26,16 @@ class ConductedSurvey(SemiStructuredNode):
                             )
     sentimentSet = BooleanProperty(default= False)
     def pre_save(self):
-        self.updatedOn = datetime.datetime.utcnow()
+        if self.updatedOn is None:
+            self.updatedOn = self.addedOn
+        else:
+            self.updatedOn = datetime.utcnow().replace(tzinfo=pytz.utc)
         if self.sentimentSet is False:
             SentimentSetter.setSentimentVariables(self)
-                
+
+    def set_closedOn(self, dt: Optional[datetime] = None) -> None:
+        if dt is None:
+            self.closedOn = datetime.utcnow().replace(tzinfo=pytz.utc)
+        else:
+            self.closedOn = dt.replace(tzinfo=pytz.utc)
+

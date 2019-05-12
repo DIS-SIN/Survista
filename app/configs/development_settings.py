@@ -4,6 +4,6 @@
 SECRET_KEY = "dev"
 
 ######################################################## FLASK SQLAlchemy SETTINGS ####################################################
-#Postgres Database URI used by the SQLAlchemy ORM
+#Neo4j Database URI used by the Neomodel OGM
 ## THIS SHOULD BE SET AS AN ENVIRONMENT VARIABLE IN PRODUCTION ##
-SQLALCHEMY_DATABASE_URI = "postgresql+psycopg2://postgres:password@localhost:5432/survista"
+NEOMODEL_DATABASE_URI = "bolt://test:test@localhost:7687"

@@ -1,23 +1,16 @@
 from flask import current_app, g, Flask
-from src.models.base_model import base
 from src.models import init_base
+from neomodel.util import Database
 
 
-def get_db():
+def get_db() -> Database:
     """
-    Used to load the sqlalchemy session in the g local proxy
-    and then return the session
+    Get the loaded db object from neomodel
     """
-    if 'scoped_session' not in g:
-        # get the scoped_session registry from the SQLAlchemy object
-        g.scoped_session = base.session
-    if 'db' not in g:
-        # get the current session from the scoped_session registry
-        # >>> some_session = g.scoped_session()
-        # >>> other_session = g.scoped_session()
-        # >>> some_session is other_session
-        # >>> True
-        g.db = g.scoped_session()
+    if "db" not in g:
+        from neomodel import db
+        if "db" not in g:
+            g.db = db
     return g.db
 
 
@@ -26,28 +19,23 @@ def close_db(e=None):
     Used to close the session and end the connection between the database
     and the client
     """
-    scoped_session = g.pop('scoped_session', None)
-    g.pop("db", None)
-    if scoped_session is not None:
-        # the remove function rollsback
-        # then calls the close function on the session of the registry
-        # >>> some_session = scoped_session()
-        # >>> scoped_session.remove()
-        # >>> new_session = scoped_session()
-        # >>> some_session is new_session
-        # >>> False
-        scoped_session.remove()
+    db = g.pop('db', None)
+    if db is not None:
+        del db
 
 
 def init_app(app: Flask):
     # register the close_db with the removal of the app context event
     app.teardown_appcontext(close_db)
-    # init_base is used to initialise the global SQLAlchemy
+    # init_base is used to initialise the NeoModel config
     init_base(app)
 
 
 def init_db(app):
-    base.create_all()
+
+    from neomodel import install_all_labels
+    install_all_labels()
+
     from .utils.detect_loaders import detect
     import importlib
     try:
@@ -60,3 +48,14 @@ def init_db(app):
             run_method(app)
     except ImportError:
         pass
+
+
+def distroy_db(app):
+    """
+    wipe the database
+    """
+    from neomodel.util import clear_neo4j_database
+    from neomodel import db
+    clear_neo4j_database(db)
+    from neomodel import remove_all_labels
+    remove_all_labels()

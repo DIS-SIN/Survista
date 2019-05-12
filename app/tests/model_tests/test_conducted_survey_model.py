@@ -1,328 +1,117 @@
-"""
-A conducted survey (ConductedSurvey) is essentially a survey which has been
-sent out for responses. Do not confuse this for the SurveyModel. There is a
-one to many relationship between surveys (SurveyModel) and conducted surveys.
-To put it in plain english I can conduct a survey many times.
-The goal of the ConductedSurveyModel is to capture this. 
-"""
-from datetime import datetime
 import pytest
 from src import create_app
-from sqlalchemy.exc import IntegrityError
-import os
-os.environ['SURVISTA_SQLALCHEMY_DATABASE_URI'] = "postgresql+psycopg2:" + \
-    "//postgres:password@" + \
-    "localhost:5432/" + \
-    "survista_test"
+from datetime import datetime
+import pytz
 
-
-def test_create_row():
-    from .utils.refresh_schema import drop_and_create
-
-    drop_and_create()
+class Test_ConductedSurvey_Model_CRUD():
     app = create_app(mode="development",
-                     static_path='../static',
-                     instance_path='../instance',
-                     templates_path='../templates')
-    with app.app_context():
-        from src.database.db import init_db, get_db, close_db
-        init_db(app)
+                     static_path="../static",
+                     templates_path="../templates",
+                     instance_path="../instance")
 
-        from src.models.conducted_survey_model import ConductedSurveyModel
-        from sqltills import create_rows, read_rows
+    def test_create_node(self):
+        with self.app.app_context():
+            from src.database.db import get_db, distroy_db, init_db
+            distroy_db(self.app)
+            init_db(self.app)
+            from src.models.conducted_survey_model import ConductedSurvey
+            transaction_factory = get_db()
+            current_transaction = transaction_factory.transaction
+            with current_transaction:
+                from src.models.conducted_survey_model import ConductedSurvey
+                test_conducted_survey_1 = ConductedSurvey()
+                test_conducted_survey_1.save()
 
-        # testing instatiation of ConductedSurveyModel row
-        conducted_survey_1 = ConductedSurveyModel(slug="conducted_survey_1",
-                                                  conductedOn=datetime(2019, 4,
-                                                                       21, 15,
-                                                                       2))
-        # testing the insertion of the ConductedSurveyModel row
-        current_sess = get_db()
-        create_rows(current_sess, conducted_survey_1)
-        assert conducted_survey_1.id is not None
-        assert conducted_survey_1.slug is not None
-        assert conducted_survey_1.addedOn is not None
-        assert conducted_survey_1.updatedOn is not None
-        assert conducted_survey_1.conductedOn is not None
-        assert conducted_survey_1.addedOn == conducted_survey_1.updatedOn
-        close_db()
+            pytest.test_conducted_survey_1 = test_conducted_survey_1
+            pytest.nodeId = test_conducted_survey_1.nodeId
 
-        # ensure that the row is actually created
-        assert current_sess != get_db()
-        current_sess = get_db()
-        conducted_survey_row = read_rows(current_sess, ConductedSurveyModel,
-                                         filters=[
-                                             {
-                                                 'slug': {
-                                                     'comparitor':
-                                                     '==',
-                                                     'data':
-                                                     'conducted_survey_1'
-                                                 }
-                                             }
-                                         ]).one()
-        assert conducted_survey_row.id is not None
-        assert conducted_survey_row.slug == "conducted_survey_1"
-        assert conducted_survey_row.conductedOn == datetime(2019, 4, 21, 15, 2)
+    def test_nodeId_field_is_generated(self):
+        assert pytest.test_conducted_survey_1.nodeId is not None
+    
+    def test_addedOn_field_is_datetime(self):
+        assert pytest.test_conducted_survey_1.addedOn is not None
+        assert isinstance(pytest.test_conducted_survey_1.addedOn, datetime)
+    
+    def test_addedOn_field_is_equal_to_updatedOn_field_on_creation(self):
+        assert pytest.test_conducted_survey_1.addedOn == pytest.test_conducted_survey_1.updatedOn
+    
+    def test_sentimentSet_field_is_true(self):
+        assert pytest.test_conducted_survey_1.sentimentSet is True
 
-        # test slug not null constraint
-        # ensure integrity error is raised
-        # ensure that intergrity error is raised bacause of null slug
-        conducted_survey_2 = ConductedSurveyModel(conductedOn=datetime(2019, 4,
-                                                                       21, 15,
-                                                                       2))
-        with pytest.raises(IntegrityError):
-            create_rows(current_sess, conducted_survey_2)
+    def test_status_options_constraint(self):
+        with self.app.app_context():
+            from src.database.db import get_db
+            from src.models.conducted_survey_model import ConductedSurvey
+            from neomodel.exception import DeflateError
+            current_transaction = get_db().transaction
+            with pytest.raises(DeflateError):
+                with current_transaction:
+                    test_conducted_survey_2 = ConductedSurvey(
+                        status="not-valid"
+                    )
+                    test_conducted_survey_2.save()
+            with current_transaction:
+                test_conducted_survey_2.status = "active"
+                test_conducted_survey_2.save()
+                test_conducted_survey_2.status = "abandoned"
+                test_conducted_survey_2.save()
+                test_conducted_survey_2.status = "closed"
+                test_conducted_survey_2.save()
+    def test_setClosedOn_method(self):
+        with self.app.app_context():
+            from src.database.db import get_db
+            from src.models.conducted_survey_model import ConductedSurvey
 
-        conducted_survey_2.slug = "conducted_survey_2"
-        create_rows(current_sess, conducted_survey_2)
+            current_transaction = get_db().transaction
+            with current_transaction:
+                test_conducted_survey_3 = ConductedSurvey()
+                test_conducted_survey_3.save()
+                test_conducted_survey_3.set_closedOn()
+                test_conducted_survey_3.save()
+            
+            assert test_conducted_survey_3.closedOn is not None
+            assert isinstance(test_conducted_survey_3.closedOn, datetime)
 
-        # test slug unique constraint
-        # ensure integrity error is raised
-        # ensure integrity error is raised because slug is not unique
-        conducted_survey_3 = ConductedSurveyModel(slug='conducted_survey_2',
-                                                  conductedOn=datetime(2019, 4,
-                                                                       21, 15,
-                                                                       2))
-        assert conducted_survey_3.slug is not None
-        with pytest.raises(IntegrityError):
-            create_rows(current_sess, conducted_survey_3)
-        conducted_survey_3.slug = "conducted_survey_3"
-        create_rows(current_sess, conducted_survey_3)
+            set_to_date = datetime(2019,4,21,15,6,9)
 
+            with current_transaction:
+                test_conducted_survey_3.set_closedOn(set_to_date)
+                test_conducted_survey_3.save()
+            
+            assert test_conducted_survey_3.closedOn == set_to_date.replace(tzinfo=pytz.utc)
 
-def test_update_row():
-    app = create_app(mode="development",
-                     static_path='../static',
-                     instance_path='../instance',
-                     templates_path='../templates')
-    with app.app_context():
-        from src.database.db import get_db
-        from src.models.conducted_survey_model import ConductedSurveyModel
-        from sqltills import update_rows, read_rows
+            with current_transaction:
+                test_conducted_survey_1 = ConductedSurvey.nodes.get(
+                    nodeId=pytest.test_conducted_survey_1.nodeId
+                )
+                test_conducted_survey_1.set_closedOn()
+                test_conducted_survey_1.save()
 
-        update_rows(get_db(), ConductedSurveyModel, {
-            'slug': 'conducted_survey_101'
-        },
-            [{
-                'slug': {
-                    'comparitor': '==',
-                    'data': 'conducted_survey_3'
-                }
-            }])
+    def test_update_node(self):
+        with self.app.app_context():
+            from src.database.db import get_db
+            from src.models.conducted_survey_model import ConductedSurvey
+            current_transation = get_db().transaction
+            with current_transation:
+                test_conducted_survey_1 = ConductedSurvey.nodes.all()[0]
+                test_conducted_survey_1.googleSentimentScore = 0.4
+                test_conducted_survey_1.save()
 
-        update_row = read_rows(get_db(), ConductedSurveyModel, filters=[
-            {
-                'slug': {
-                    'comparitor': '==',
-                    'data': 'conducted_survey_101'
-                }
-            }
-        ]).one()
+            assert test_conducted_survey_1.updatedOn >\
+                pytest.test_conducted_survey_1.updatedOn
 
-        assert update_row.updatedOn > update_row.addedOn
+    def test_delete_node(self):
+        with self.app.app_context():
+            from src.database.db import get_db
+            from src.models.conducted_survey_model import ConductedSurvey
+            current_transaction = get_db().transaction
+            with current_transaction:
+                test_conducted_survey_1 = ConductedSurvey.nodes.all()[0]
+                test_conducted_survey_1.delete()
 
-
-def test_delete_row():
-    app = create_app(mode="development",
-                     static_path='../static',
-                     instance_path='../instance',
-                     templates_path='../templates')
-    with app.app_context():
-        from src.database.db import get_db, close_db
-        from sqltills import delete_rows, read_rows
-        from src.models.conducted_survey_model import ConductedSurveyModel
-
-        # test deleting a row outside of the session scope
-        # ensure what we are deleting is actually there
-        current_sess = get_db()
-        conducted_survey = read_rows(current_sess, ConductedSurveyModel,
-                                     filters=[{
-                                         'slug': {
-                                             'comparitor': '==',
-                                             'data': 'conducted_survey_101'
-                                         }
-                                     }]).one_or_none()
-        assert conducted_survey is not None
-        close_db()
-        assert get_db() != current_sess
-        current_sess = get_db()
-        delete_rows(current_sess, ConductedSurveyModel, filters=[{
-            'slug': {
-                'comparitor': '==',
-                'data': 'conducted_survey_101'
-            }
-        }])
-        close_db()
-        assert get_db() != current_sess
-        current_sess = get_db()
-        conducted_survey = read_rows(current_sess, ConductedSurveyModel,
-                                     filters=[{
-                                         'slug': {
-                                             'comparitor': '==',
-                                             'data': 'conducted_survey_101'
-                                         }
-                                     }]).one_or_none()
-        assert conducted_survey is None
-
-
-def test_create_survey_relationship():
-    app = create_app(mode="development",
-                     static_path='../static',
-                     instance_path='../instance',
-                     templates_path='../templates')
-    with app.app_context():
-        from src.database.db import get_db, close_db
-        from src.models.survey_model import SurveyModel
-        from src.models.conducted_survey_model import ConductedSurveyModel
-        from sqltills import create_rows, read_rows
-
-        # test the creation of the relationship outside of session scope
-        current_sess = get_db()
-        test_survey_1 = SurveyModel(title="Test Survey 1", slug="test_survey")
-        conducted_survey_3 = ConductedSurveyModel(slug="conducted_survey_3",
-                                                  conductedOn=datetime(2019, 4,
-                                                                       21))
-        conducted_survey_3.survey = test_survey_1
-        create_rows(current_sess, conducted_survey_3)
-        assert conducted_survey_3.surveyId is not None
-        assert test_survey_1.conductedSurveys[0].id == conducted_survey_3.id
-
-        # test the creation of the relationship inside of session scope
-        conducted_survey_2 = read_rows(current_sess, ConductedSurveyModel,
-                                       filters=[{
-                                           'slug': {
-                                               'comparitor': '==',
-                                               'data': 'conducted_survey_2'
-                                           }
-                                       }]).one()
-        conducted_survey_2.survey = test_survey_1
-        current_sess.commit()
-        assert conducted_survey_2.surveyId is not None
-        assert test_survey_1.conductedSurveys[1].id == conducted_survey_2.id
-
-
-def test_update_survey_relationship():
-    app = create_app(mode="development",
-                     static_path='../static',
-                     instance_path='../instance',
-                     templates_path='../templates')
-    with app.app_context():
-        from src.database.db import get_db, close_db
-        from src.models.survey_model import SurveyModel
-        from src.models.conducted_survey_model import ConductedSurveyModel
-        from sqltills import read_rows, update_rows
-
-        # test update relationship outside session scope
-        current_sess = get_db()
-        update_rows(current_sess, SurveyModel,
-                    {'id': '101'},
-                    filters=[{
-                        'slug': {
-                            'comparitor': '==',
-                            'data': 'test_survey'
-                        }
-                    }])
-        conducted_surveys = read_rows(current_sess, ConductedSurveyModel,
-                                      filters=[{
-                                          'slug': {
-                                              'comparitor': '==',
-                                              'data': 'conducted_survey_2'
-                                          },
-                                          'join': 'or'
-                                      },
-                                          {
-                                          'slug': {
-                                              'comparitor': '==',
-                                              'data': 'conducted_survey_3'
-                                          }
-                                      }]).all()
-        for row in conducted_surveys:
-            assert row.surveyId == 101
-
-        close_db()
-        assert current_sess != get_db()
-        current_sess = get_db()
-
-        # test update row within session scope
-        survey = read_rows(current_sess, SurveyModel,
-                           filters=[{
-                               'slug': {
-                                   'comparitor': '==',
-                                   'data': 'test_survey'
-                               }
-                           }]).one()
-        conducted_survey_2 = read_rows(current_sess, ConductedSurveyModel,
-                                       filters=[{
-                                           'slug': {
-                                               'comparitor': '==',
-                                               'data': 'conducted_survey_2'
-                                           }
-                                       }]).one()
-        conducted_survey_3 = read_rows(current_sess, ConductedSurveyModel,
-                                       filters=[{
-                                           'slug': {
-                                               'comparitor': '==',
-                                               'data': 'conducted_survey_3'
-                                           }
-                                       }]).one()
-        survey.id = 102
-        current_sess.commit()
-        assert conducted_survey_2.survey.id == 102
-        assert conducted_survey_3.survey.id == 102
-
-
-def test_delete_survey_relationship():
-    app = create_app(mode="development",
-                     static_path='../static',
-                     instance_path='../instance',
-                     templates_path='../templates')
-    with app.app_context():
-        from src.database.db import get_db, close_db
-        from src.models.survey_model import SurveyModel
-        from src.models.conducted_survey_model import ConductedSurveyModel
-        from sqltills import delete_rows, read_rows
-
-        # test delete relationship inside of session context
-        current_sess = get_db()
-        conducted_survey_2 = read_rows(current_sess, ConductedSurveyModel,
-                                       filters=[{
-                                           'slug': {
-                                               'comparitor': '==',
-                                               'data': 'conducted_survey_2'
-                                           }
-                                       }]).one()
-        conducted_survey_2.survey = None
-        current_sess.commit()
-        assert conducted_survey_2.surveyId is None
-
-        # test delete relationship outside of session context
-        # ensure that the relationship exists before deleting
-        conducted_survey_3 = read_rows(current_sess, ConductedSurveyModel,
-                                       filters=[{
-                                           'slug': {
-                                               'comparitor':
-                                               '==',
-                                               'data':
-                                               'conducted_survey_3'
-                                           }
-                                       }]).one()
-        close_db()
-        assert current_sess != get_db()
-        current_sess = get_db()
-        delete_rows(current_sess, SurveyModel, filters=[{
-            'slug': {
-                'comparitor': '==',
-                'data': 'test_survey'
-            }
-        }])
-        conducted_survey_3 = read_rows(current_sess, ConductedSurveyModel,
-                                       filters=[
-                                           {
-                                               'slug': {
-                                                   'comparitor': '==',
-                                                   'data': 'conducted_survey_3'
-                                               }
-                                           }
-                                       ]).one()
-        assert conducted_survey_3.surveyId is None
+            deletedNode = get_db().cypher_query(
+                "MATCH (s:ConductedSurvey {nodeId: " + 
+                f"'{test_conducted_survey_1.nodeId}'" + "}) " +
+                "RETURN s"
+            )
+            assert not deletedNode[0]

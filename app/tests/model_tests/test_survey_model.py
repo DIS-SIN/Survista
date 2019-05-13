@@ -20,9 +20,10 @@ class Test_Survey_Model_CRD():
             current_transaction = transaction_factory.transaction
             with current_transaction:
                 from src.models.survey_model import Survey
-                test_survey_1 = Survey(title="Test Survey 1",
-                                    slug="test_survey_1",
-                                    language="en")
+                test_survey_1 = Survey(
+                                        slug="test_survey_1",
+                                        language="en"
+                                    )
                 test_survey_1.save()
             
             pytest.test_survey_1 = test_survey_1
@@ -43,8 +44,9 @@ class Test_Survey_Model_CRD():
             current_transaction = transaction_factory.transaction
             with pytest.raises(RequiredProperty):
                 with current_transaction:
-                    test_survey_2 = Survey(title="Test Survey 2",
-                                           slug="test_survey_2")
+                    test_survey_2 = Survey(
+                        slug="test_survey_2"
+                    )
                     test_survey_2.save()
             current_transaction = transaction_factory.transaction
             with current_transaction:
@@ -59,9 +61,10 @@ class Test_Survey_Model_CRD():
             current_transaction = get_db().transaction
             with pytest.raises(DeflateError):
                 with current_transaction:
-                    test_survey_3 = Survey(title="Test Survey 3",
-                                           slug="test_survey_3",
-                                           language="Japanese")
+                    test_survey_3 = Survey(
+                        slug="test_survey_3",
+                        language="Japanese"
+                    )
                     test_survey_3.save()
 
             with current_transaction:
@@ -81,7 +84,6 @@ class Test_Survey_Model_CRD():
             with pytest.raises(RequiredProperty):
                 with current_transaction:
                     test_survey_5 = Survey(
-                        title="Test survey 5",
                         language="en"
                     )
                     test_survey_5.save()
@@ -101,7 +103,6 @@ class Test_Survey_Model_CRD():
                 with current_transaction:
                     test_survey_6 = Survey(
                         slug="test_survey_5",
-                        title="Test survey 6",
                         language="en"
                     )
                     test_survey_6.save()
@@ -168,3 +169,86 @@ class Test_SurveyVersion_Model_CRD:
             with current_transaction:
                 test_survey_version_2.title = "Survey Version 2"
                 test_survey_version_2.save()
+
+class Test_Survey_SurveyVersion_Relationship:
+
+    app = create_app(
+        mode='development',
+        static_path='../static',
+        templates_path='../templates',
+        instance_path='../instance'
+    )
+    
+    def test_create_relationship(self):
+        with self.app.app_context():
+            from src.database.db import get_db, init_app, distroy_db
+            from src.models.survey_model import Survey, SurveyVersion
+            
+            distroy_db(self.app)
+            init_app(self.app)
+
+            current_transaction = get_db().transaction
+            with current_transaction:
+                test_Survey_1 = Survey(
+                    slug="test_survey_1",
+                    language="en"
+                )
+                test_SurveyVersion_1 = SurveyVersion(
+                    title="Test Survey 1"
+                )
+                test_Survey_1.save()
+                test_SurveyVersion_1.save()
+                rel = test_Survey_1.versions.connect(test_SurveyVersion_1)
+
+            assert len(test_SurveyVersion_1.survey.all()) == 1
+            
+            pytest.test_Survey_SurveyVersion_rel_1 = rel
+            pytest.test_Survey_1 = test_Survey_1
+            pytest.test_SurveyVersion_1 = test_SurveyVersion_1
+    def test_addedOn_field_is_datetime(self):
+        assert pytest.test_Survey_SurveyVersion_rel_1.addedOn is not None
+        assert isinstance(pytest.test_Survey_SurveyVersion_rel_1.addedOn, datetime)
+    
+    def test_one_cardinality_for_SurveyVersion(self):
+        with self.app.app_context():
+            from src.database.db import get_db
+            from src.models.survey_model import SurveyVersion, Survey
+            from neomodel.exceptions import AttemptedCardinalityViolation
+            current_transaction = get_db().transaction
+            with pytest.raises(AttemptedCardinalityViolation):
+                with current_transaction:
+                    test_Survey_2 = Survey(
+                        slug='test_survey_2',
+                        language='en'
+                    )
+                    test_Survey_2.save()
+                    test_SurveyVersion_1 = pytest.test_SurveyVersion_1
+                    test_SurveyVersion_1.survey.connect(test_Survey_2)
+    
+    def test_one_or_mode_cardinality_for_Survey(self):
+        with self.app.app_context():
+            from src.database.db import get_db
+            from src.models.survey_model import SurveyVersion
+
+            current_transaction = get_db().transaction
+
+            with current_transaction:
+                test_Survey_1 = pytest.test_Survey_1
+                test_SurveyVersion_2 = SurveyVersion(
+                    title="Test SurveyVersion 2"
+                )
+                test_SurveyVersion_2.save()
+                test_Survey_1.versions.connect(test_SurveyVersion_2)
+            
+            assert len(test_Survey_1.versions.all()) == 2
+
+
+                
+
+
+
+            
+
+
+    
+            

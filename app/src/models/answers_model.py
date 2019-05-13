@@ -21,7 +21,6 @@ class Answer(SemiStructuredNode):
             }
     )
     sentimentSet = BooleanProperty(default=False)
-    sentimentCalculated = BooleanProperty(default=False)
     def pre_save(self):
         self.updatedOn = datetime.utcnow().replace(
             tzinfo=pytz.utc

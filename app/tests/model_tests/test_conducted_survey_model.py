@@ -65,28 +65,12 @@ class Test_ConductedSurvey_Model_CRUD():
             current_transaction = get_db().transaction
             with current_transaction:
                 test_conducted_survey_3 = ConductedSurvey()
-                test_conducted_survey_3.save()
                 test_conducted_survey_3.set_closedOn()
                 test_conducted_survey_3.save()
             
             assert test_conducted_survey_3.closedOn is not None
             assert isinstance(test_conducted_survey_3.closedOn, datetime)
-
-            set_to_date = datetime(2019,4,21,15,6,9)
-
-            with current_transaction:
-                test_conducted_survey_3.set_closedOn(set_to_date)
-                test_conducted_survey_3.save()
             
-            assert test_conducted_survey_3.closedOn == set_to_date.replace(tzinfo=pytz.utc)
-
-            with current_transaction:
-                test_conducted_survey_1 = ConductedSurvey.nodes.get(
-                    nodeId=pytest.test_conducted_survey_1.nodeId
-                )
-                test_conducted_survey_1.set_closedOn()
-                test_conducted_survey_1.save()
-
     def test_update_node(self):
         with self.app.app_context():
             from src.database.db import get_db

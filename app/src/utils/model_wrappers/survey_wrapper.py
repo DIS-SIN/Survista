@@ -2,7 +2,8 @@ from typing import Optional, Union, cast
 from src.utils.exceptions.wrapper_exceptions import NoCurrentVersionFound, VersionDoesNotBelongToNode
 import src.models.survey_model as sm
 from src.database.db import get_db
-
+from datetime import datetime
+from neomodel.exceptions import DoesNotExist
  
 class SurveyWrapper:
 
@@ -15,8 +16,13 @@ class SurveyWrapper:
         return self._survey
     
     @survey.setter
-    def survey(self, survey: "sm.Survey") -> None:
+    def survey(self, survey: Union[str,"sm.Survey"]) -> None:
+        if isinstance(survey, str):
+            survey = sm.Survey.nodes.get(nodeId=survey)
+        
+        survey = cast(sm.Survey, survey)
         self._survey = survey
+    
     @property
     def currentVersion(self) -> "sm.SurveyVersion":
         # check if we have already assigned the private variable
@@ -63,6 +69,33 @@ class SurveyWrapper:
         if self._currentVersion.currentVersion != True:
             self._currentVersion.currentVersion = True
             self._currentVersion.save()
+    
+    def set_survey_variables(self,**kwargs) -> None:
+        for key in kwargs:
+            setattr(self._survey, key, kwargs[key])
+        self.save()
+    def get_survey_version(
+        self,
+        nodeId: Optional[str] = None,
+        addedOn: Optional[datetime] = None,
+        title: Optional[str] = None
+    ) -> Union["sm.SurveyVersion", None]:
+        if nodeId is not None:
+           return self._survey.versions.get(nodeId=nodeId)
+        elif addedOn is not None and title is not None:
+               retrieved_version = self._survey.versions.match(addedOn=addedOn).filter(
+                                title=title
+               ).first_or_none()
+               return retrieved_version
+        elif addedOn is not None:
+            return self._survey.versions.match(addedOn=addedOn).first_or_none()
+        elif title is not None:
+            return self._survey.versions.filter(title=title).first()
+        else:
+            raise ValueError("You must provide wither nodeId, addedOn, or title")
+
+    def save(self) -> None:
+        self._survey.save()
 
 
 

@@ -94,7 +94,7 @@ class Test_Survey_Wrapper:
                 
                 assert test_survey_wrapper_1.currentVersion == test_survey_version_1
 
-    def test_SurveyWrapper_currentVersion_setter_with_actual_version(self):
+    def test_SurveyWrapper_currentVersion_setter_with_node(self):
         with self.app.app_context():
             from src.database.db import get_db
             from src.models.survey_model import SurveyVersion
@@ -103,7 +103,7 @@ class Test_Survey_Wrapper:
 
             with current_transaction:
                 test_survey_version_2 = SurveyVersion(
-                    title="Test Survey Version 1",
+                    title="Test Survey Version 2",
                 )
                 test_survey_version_2.save()
 
@@ -112,12 +112,46 @@ class Test_Survey_Wrapper:
 
                 assert test_survey_version_2.currentVersion is True
     
-    def test_SurveyWrapper_currentVersion_getter_with_node(self):
-        # TODO
-        # write this test
-        # write test where SurveyVersion of one Survey is trying to be assigned in SurveyVersion of other survey through wrapper 
-        pass
+    def test_SurveyWrapper_currentVersion_setter_with_nodeId(self):
+        with self.app.app_context():
+            from src.database.db import get_db
+            from src.models.survey_model import SurveyVersion
 
+            current_transaction = get_db().transaction
+
+            with current_transaction:
+                test_survey_version_3 = SurveyVersion(
+                    title="Test Survey Version 3"
+                )
+                test_survey_version_3.save()
+
+                test_survey_wrapper_1 = pytest.test_survey_wrapper_1
+                test_survey_wrapper_1.currentVersion = test_survey_version_3.nodeId
+
+                test_survey_version_3.refresh()
+                assert test_survey_version_3.currentVersion is True
+    
+    def test_SurveyWrapper_currentVersion_setter_node_from_another_parent(self):
+        with self.app.app_context():
+            from src.database.db import get_db
+            from src.models.survey_model import SurveyVersion
+            from src.utils.exceptions.wrapper_exceptions import VersionDoesNotBelongToNode
+            current_transaction = get_db().transaction
+
+            with current_transaction:
+                test_survey_version_4 = SurveyVersion(
+                    title="Test Survey Version 4"
+                )
+
+                test_survey_version_4.save()
+                test_survey_1 = pytest.test_survey_1
+
+                test_survey_1.versions.connect(test_survey_version_4)
+                
+                test_survey_wrapper_1 = pytest.test_survey_wrapper_1
+                with pytest.raises(VersionDoesNotBelongToNode):
+                    test_survey_wrapper_1.currentVersion = test_survey_version_4
+                    
 
             
 

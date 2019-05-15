@@ -16,13 +16,5 @@ class Question(SemiStructuredNode):
                               'fr': 'French'
                             }
                         )
+    question = StringProperty(unique_index=True)
     addedOn = DateTimeProperty(default_now=True)
-
-class QuestionVersion(SemiStructuredNode):
-
-    nodeId = UniqueIdProperty()
-    question = StringProperty(required=True)
-    currentVersion = BooleanProperty(default=False)
-
-
-

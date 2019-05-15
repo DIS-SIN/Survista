@@ -4,7 +4,7 @@ import src.models.survey_model as sm
 from src.database.db import get_db
 from datetime import datetime
 from neomodel.exceptions import DoesNotExist
- 
+from neomodel import NodeSet
 class SurveyWrapper:
 
     def __init__(self, survey: Optional["sm.Survey"] = None) -> None:
@@ -77,23 +77,32 @@ class SurveyWrapper:
     def get_survey_version(
         self,
         nodeId: Optional[str] = None,
-        addedOn: Optional[datetime] = None,
         title: Optional[str] = None
     ) -> Union["sm.SurveyVersion", None]:
+        # if the nodeId is present use that to get the version node
         if nodeId is not None:
            return self._survey.versions.get(nodeId=nodeId)
-        elif addedOn is not None and title is not None:
-               retrieved_version = self._survey.versions.match(addedOn=addedOn).filter(
-                                title=title
-               ).first_or_none()
-               return retrieved_version
-        elif addedOn is not None:
-            return self._survey.versions.match(addedOn=addedOn).first_or_none()
+        # otherwise use the title and get the first node with that title 
         elif title is not None:
             return self._survey.versions.filter(title=title).first()
         else:
             raise ValueError("You must provide wither nodeId, addedOn, or title")
-
+    def get_survey_versions_lt_datetime(
+        self,
+        thershhold: datetime,
+        inclusive: bool = False
+    ) -> NodeSet:
+        if inclusive:
+            return self._survey.versions.match(addedOn__lte=thershhold)
+        return self._survey.versions.match(addedOn__lt=thershhold)
+    def get_survey_versions_gt_datetime(
+        self,
+        thershhold: datetime,
+        inclusive: bool = False
+    ) -> NodeSet:
+        if inclusive:
+           return self._survey.versions.match(addedOn_gte=thershhold)
+        return self._survey.versions.match(addedON_gt=thershhold)
     def save(self) -> None:
         self._survey.save()
 

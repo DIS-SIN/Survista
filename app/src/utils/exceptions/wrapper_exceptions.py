@@ -1,6 +1,6 @@
 
-from neomodel.exceptions import DoesNotExist
-class NoCurrentVersionFound(DoesNotExist):
+
+class NoCurrentVersionFound(KeyError):
     """
     No version node of the a particular parent node could be found
     """

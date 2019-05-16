@@ -44,7 +44,7 @@ class SurveyWrapper:
             currentVersion = sm.SurveyVersion.nodes.get(nodeId = currentVersion)
         currentVersion = cast("sm.SurveyVersion", currentVersion)
         # get the single survey node or none if the version is not attached to a survey
-        currentVersionSurvey = currentVersion.survey.single()
+        currentVersionSurvey = currentVersion.survey.get_or_none()
 
         # assert that the survey of the SurveyVersion is none or it is the attached survey in the wrapper
         try:
@@ -56,14 +56,13 @@ class SurveyWrapper:
 
         # if the version does not have a survey then create a relationship and set currentVersion bool flag
         if currentVersionSurvey is None:
-            with get_db().transaction:
-                self._currentVersion.currentVersion = True
-                self._survey.versions.connect(self._currentVersion)
+            self._currentVersion.currentVersion = True
+            self._currentVersion.save()
+            self._survey.versions.connect(self._currentVersion)
         # if the currentVersion bool flag is not true then set this to be true
         if self._currentVersion.currentVersion != True:
-            with get_db().transaction:
-                self._currentVersion.currentVersion = True
-                self._currentVersion.save()
+            self._currentVersion.currentVersion = True
+            self._currentVersion.save()
 
 
 

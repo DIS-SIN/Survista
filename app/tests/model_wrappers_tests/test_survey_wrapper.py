@@ -224,9 +224,31 @@ class Test_Survey_Wrapper:
                     test_survey_version_8,
                     {'addedOn': datetime(2019,5,22,18,2,40,12,pytz.utc)}
                 )
-
                 test_survey_wrapper_3 = SurveyWrapper(test_survey_3)
                 test_survey_wrapper_3.currentVersion = test_survey_version_8
+                
+                pytest.test_survey_3 = test_survey_3
+                pytest.test_survey_wrapper_3 = test_survey_wrapper_3
+    def test_SurveyWrapper_get_survey_versions_lt_datetime(self):
+        with self.app.app_context():
+            from src.database.db import get_db
+            
+            current_transaction = get_db().transaction
+
+            with current_transaction:
+                test_survey_wrapper_3 = pytest.test_survey_wrapper_3
+                
+                nodes = test_survey_wrapper_3.get_survey_versions_lt_datetime(
+                    datetime(2019,4,23)
+                )
+                assert len(nodes) == 3
+
+                nodes = test_survey_wrapper_3.get_survey_versions_lt_datetime(
+                    datetime(2019,4,23,18,2,40,12,pytz.utc),
+                    True
+                )
+                
+                assert len(nodes) == 4
 
 
 

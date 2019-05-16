@@ -98,16 +98,16 @@ class SurveyWrapper:
         inclusive: bool = False
     ) -> NodeSet:
         if inclusive:
-            return self._survey.versions.match(addedOn__gte=thershhold)
-        return self._survey.versions.match(addedOn__gt=thershhold)
+            return self._survey.versions.match(addedOn__lte=thershhold)
+        return self._survey.versions.match(addedOn__lt=thershhold)
     def get_survey_versions_gt_datetime(
         self,
         thershhold: datetime,
         inclusive: bool = False
     ) -> NodeSet:
         if inclusive:
-           return self._survey.versions.match(addedOn_lte=thershhold)
-        return self._survey.versions.match(addedON_lt=thershhold)
+           return self._survey.versions.match(addedOn_gte=thershhold)
+        return self._survey.versions.match(addedON_gt=thershhold)
     def get_survey_versions_between_datetime(
         self,
         thershhold_lower: datetime,

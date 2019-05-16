@@ -69,6 +69,11 @@ class SurveyWrapper:
         if self._currentVersion.currentVersion != True:
             self._currentVersion.currentVersion = True
             self._currentVersion.save()
+        
+        for version in self._survey.versions:
+            if version != self._currentVersion:
+                version.currentVersion = False
+                version.save()
     
     def set_survey_variables(self,**kwargs) -> None:
         for key in kwargs:
@@ -93,16 +98,45 @@ class SurveyWrapper:
         inclusive: bool = False
     ) -> NodeSet:
         if inclusive:
-            return self._survey.versions.match(addedOn__lte=thershhold)
-        return self._survey.versions.match(addedOn__lt=thershhold)
+            return self._survey.versions.match(addedOn__gte=thershhold)
+        return self._survey.versions.match(addedOn__gt=thershhold)
     def get_survey_versions_gt_datetime(
         self,
         thershhold: datetime,
         inclusive: bool = False
     ) -> NodeSet:
         if inclusive:
-           return self._survey.versions.match(addedOn_gte=thershhold)
-        return self._survey.versions.match(addedON_gt=thershhold)
+           return self._survey.versions.match(addedOn_lte=thershhold)
+        return self._survey.versions.match(addedON_lt=thershhold)
+    def get_survey_versions_between_datetime(
+        self,
+        thershhold_lower: datetime,
+        thershhold_higher: datetime,
+        thershhold_lower_inclusive: bool = True,
+        thershhold_higher_inclusive: bool = False
+    ) -> NodeSet:
+        
+        if thershhold_lower_inclusive and thershhold_higher_inclusive:
+            ns = self._survey.versions.match(
+                addedOn__gte=thershhold_lower,
+                addedOn__lte=thershhold_higher
+            )
+        elif thershhold_lower_inclusive:
+            ns = self._survey.versions.match(
+                addedOn__gte=thershhold_lower,
+                addedOn__lt=thershhold_higher    
+            )
+        elif thershhold_higher_inclusive:
+            ns = self._survey.versions.match(
+                addedOn__gt=thershhold_lower,
+                addedOn__lte=thershhold_higher
+            )
+        else:
+            ns = self._survey.versions.match(
+                addedOn__gt = thershhold_lower,
+                addedOn__lt = thershhold_higher
+            )
+        return ns
     def save(self) -> None:
         self._survey.save()
 

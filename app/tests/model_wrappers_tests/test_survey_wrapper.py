@@ -1,7 +1,8 @@
 from src import create_app
 import pytest
 from src.utils.model_wrappers.survey_wrapper import SurveyWrapper
-
+from datetime import datetime
+import pytz
 class Test_Survey_Wrapper:
 
     app = create_app(
@@ -151,7 +152,88 @@ class Test_Survey_Wrapper:
                 test_survey_wrapper_1 = pytest.test_survey_wrapper_1
                 with pytest.raises(VersionDoesNotBelongToNode):
                     test_survey_wrapper_1.currentVersion = test_survey_version_4
-                    
+    def test_SurveyWrapper_set_survey_variables_method(self):
+        with self.app.app_context():
+            from src.database.db import get_db
+            from src.models.survey_model import SurveyVersion
+            from src.utils.exceptions.wrapper_exceptions import VersionDoesNotBelongToNode
+            current_transaction = get_db().transaction
+
+            with current_transaction:
+                test_survey_wrapper_1 = pytest.test_survey_wrapper_1
+
+                test_survey_wrapper_1.set_survey_variables(
+                    some_var="some_var",
+                    some_other_var="some_other_var"    
+                )
+
+                some_survey = test_survey_wrapper_1.survey
+                assert some_survey.some_var == "some_var"
+                assert some_survey.some_other_var == "some_other_var"
+
+    def test_setup_for_SurveyWrapper_datetime_filtering_methods(self):
+        with self.app.app_context():
+            from src.database.db import get_db
+            from src.models.survey_model import Survey,SurveyVersion
+            
+            current_transaction = get_db().transaction
+            
+            with current_transaction:
+                test_survey_3 = Survey(
+                    slug="test_survey_3",
+                    language="en"
+                )
+                test_survey_3.save()
+                test_survey_version_4 = SurveyVersion(
+                    title="Test Survey Version 4",
+                )
+                test_survey_version_5 = SurveyVersion(
+                    title="Test Survey Version 5"
+                )
+                test_survey_version_6 = SurveyVersion(
+                    title="Test Survey Version 6"
+                )
+                test_survey_version_7 = SurveyVersion(
+                    title="Test Survey Version 7"
+                )
+                test_survey_version_8 = SurveyVersion(
+                    title="Test Survey Version 8"
+                )
+                test_survey_version_4.save()
+                test_survey_version_5.save()
+                test_survey_version_6.save()
+                test_survey_version_7.save()
+                test_survey_version_8.save()
+                test_survey_3.versions.connect(
+                    test_survey_version_4,
+                    {'addedOn': datetime(2019,4,21,14,2,40,12,pytz.utc)}
+                )
+                test_survey_3.versions.connect(
+                    test_survey_version_5,
+                    {'addedOn': datetime(2019,4,22,14,2,40,12,pytz.utc)}
+                )
+                test_survey_3.versions.connect(
+                    test_survey_version_6,
+                    {'addedOn': datetime(2019,4,22,18,2,40,12,pytz.utc)}
+                )
+                test_survey_3.versions.connect(
+                    test_survey_version_7,
+                    {'addedOn': datetime(2019,4,23,18,2,40,12,pytz.utc)}
+                )
+                test_survey_3.versions.connect(
+                    test_survey_version_8,
+                    {'addedOn': datetime(2019,5,22,18,2,40,12,pytz.utc)}
+                )
+
+                test_survey_wrapper_3 = SurveyWrapper(test_survey_3)
+                test_survey_wrapper_3.currentVersion = test_survey_version_8
+
+
+
+
+
+
+
 
             
 

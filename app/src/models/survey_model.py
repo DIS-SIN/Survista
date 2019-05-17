@@ -1,6 +1,5 @@
 from neomodel.contrib import SemiStructuredNode
 from neomodel import(
-    StructuredRel,
     StringProperty,
     UniqueIdProperty,
     IntegerProperty,
@@ -8,17 +7,20 @@ from neomodel import(
     BooleanProperty,
     RelationshipTo,
     RelationshipFrom,
+    Relationship,
     One,
     OneOrMore
 )
+from .relationships.survey_relationships import (
+    Survey_Survey_Rel, 
+    SurveyVersion_Question_Rel, 
+    Survey_SurveyVersion_Rel
+)
+
 from datetime import datetime
 import pytz
 
-class Survey_SurveyVersion_Rel(StructuredRel):
-    addedOn = DateTimeProperty(default_now=True)
-
 class Survey(SemiStructuredNode):
-
     nodeId = UniqueIdProperty()
     slug = StringProperty(unique_index=True)
     language = StringProperty(
@@ -35,6 +37,11 @@ class Survey(SemiStructuredNode):
         model=Survey_SurveyVersion_Rel,
         cardinality=OneOrMore
     )
+    related_surveys = Relationship(
+        Survey,
+        "RELATED_SURVEY",
+        model = Survey_Survey_Rel
+    )
 
 
 class SurveyVersion(SemiStructuredNode):
@@ -43,8 +50,13 @@ class SurveyVersion(SemiStructuredNode):
     title = StringProperty(required=True)
     currentVersion = BooleanProperty(default=False)
     survey = RelationshipFrom(
-        'Survey',
+        Survey,
         'SURVEY_VERSION',
         model=Survey_SurveyVersion_Rel,
         cardinality=One
+    )
+    questions = RelationshipTo(
+        '.question_model.Question',
+        "SURVEY_QUESTION",
+        model=SurveyVersion_Question_Rel
     )

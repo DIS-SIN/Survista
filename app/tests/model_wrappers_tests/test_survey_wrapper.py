@@ -228,6 +228,11 @@ class Test_Survey_Wrapper:
                 test_survey_wrapper_3.currentVersion = test_survey_version_8
                 
                 pytest.test_survey_3 = test_survey_3
+                pytest.test_survey_version_4 = test_survey_version_4
+                pytest.test_survey_version_5 = test_survey_version_5
+                pytest.test_survey_version_6 = test_survey_version_6
+                pytest.test_survey_version_7 = test_survey_version_7
+                pytest.test_survey_version_8 = test_survey_version_8
                 pytest.test_survey_wrapper_3 = test_survey_wrapper_3
     def test_SurveyWrapper_get_survey_versions_lt_datetime(self):
         with self.app.app_context():
@@ -236,19 +241,140 @@ class Test_Survey_Wrapper:
             current_transaction = get_db().transaction
 
             with current_transaction:
+                test_survey_version_4 = pytest.test_survey_version_4
+                test_survey_version_5 = pytest.test_survey_version_5
+                test_survey_version_6 = pytest.test_survey_version_6
+                test_survey_version_7 = pytest.test_survey_version_7
+                test_survey_version_8 = pytest.test_survey_version_8
                 test_survey_wrapper_3 = pytest.test_survey_wrapper_3
                 
                 nodes = test_survey_wrapper_3.get_survey_versions_lt_datetime(
-                    datetime(2019,4,23)
+                    datetime(2019,4,23,18,2,40,12,pytz.utc)
                 )
+                assert test_survey_version_4 in nodes
+                assert test_survey_version_5 in nodes
+                assert test_survey_version_6 in nodes 
+                assert test_survey_version_7 not in nodes
+                assert test_survey_version_8 not in nodes
                 assert len(nodes) == 3
 
                 nodes = test_survey_wrapper_3.get_survey_versions_lt_datetime(
                     datetime(2019,4,23,18,2,40,12,pytz.utc),
                     True
                 )
-                
+
+                assert test_survey_version_4 in nodes
+                assert test_survey_version_5 in nodes
+                assert test_survey_version_6 in nodes 
+                assert test_survey_version_7 in nodes
+                assert test_survey_version_8 not in nodes
                 assert len(nodes) == 4
+    
+    def test_SurveyWrapper_get_survey_versions_gt_datetime(self):
+        with self.app.app_context():
+            from src.database.db import get_db
+
+            current_transaction = get_db().transaction
+
+            with current_transaction:
+                test_survey_version_4 = pytest.test_survey_version_4
+                test_survey_version_5 = pytest.test_survey_version_5
+                test_survey_version_6 = pytest.test_survey_version_6
+                test_survey_version_7 = pytest.test_survey_version_7
+                test_survey_version_8 = pytest.test_survey_version_8
+
+                test_survey_wrapper_3 = pytest.test_survey_wrapper_3
+                test_survey_wrapper_3 = pytest.test_survey_wrapper_3
+
+                nodes = test_survey_wrapper_3.get_survey_versions_gt_datetime(
+                    datetime(2019,4,22,14,2,40,12,pytz.utc)
+                )
+
+                assert test_survey_version_4 not in nodes
+                assert test_survey_version_5 not in nodes
+                assert test_survey_version_6 in nodes 
+                assert test_survey_version_7 in nodes
+                assert test_survey_version_8 in nodes
+                assert len(nodes) == 3
+
+                nodes = test_survey_wrapper_3.get_survey_versions_gt_datetime(
+                    datetime(2019,4,22,14,2,40,12,pytz.utc),
+                    True
+                )
+                assert test_survey_version_4 not in nodes
+                assert test_survey_version_5 in nodes
+                assert test_survey_version_6 in nodes 
+                assert test_survey_version_7 in nodes
+                assert test_survey_version_8 in nodes
+                assert len(nodes) == 4
+    
+    def test_SurveyWrapper_get_survey_versions_between_datetime(self):
+        with self.app.app_context():
+            from src.database.db import get_db
+
+            current_transaction = get_db().transaction
+
+            with current_transaction:
+                test_survey_version_4 = pytest.test_survey_version_4
+                test_survey_version_5 = pytest.test_survey_version_5
+                test_survey_version_6 = pytest.test_survey_version_6
+                test_survey_version_7 = pytest.test_survey_version_7
+                test_survey_version_8 = pytest.test_survey_version_8
+
+                test_survey_wrapper_3 = pytest.test_survey_wrapper_3
+
+                nodes = test_survey_wrapper_3.get_survey_versions_between_datetime(
+                    datetime(2019,4,22,14,2,40,12,pytz.utc),
+                    datetime(2019,4,23,18,2,40,12,pytz.utc),
+                )
+                
+                assert test_survey_version_4 not in nodes
+                assert test_survey_version_5 in nodes
+                assert test_survey_version_6 in nodes
+                assert test_survey_version_7 not in nodes
+                assert test_survey_version_8 not in nodes
+                assert len(nodes) == 2
+
+                nodes = test_survey_wrapper_3.get_survey_versions_between_datetime(
+                    datetime(2019,4,22,14,2,40,12,pytz.utc),
+                    datetime(2019,4,23,18,2,40,12,pytz.utc),
+                    False,
+                    False
+                )
+                
+                assert test_survey_version_4 not in nodes
+                assert test_survey_version_5 not in nodes
+                assert test_survey_version_6 in nodes
+                assert test_survey_version_7 not in nodes
+                assert test_survey_version_8 not in nodes
+                assert len(nodes) == 1
+
+                nodes = test_survey_wrapper_3.get_survey_versions_between_datetime(
+                    datetime(2019,4,22,14,2,40,12,pytz.utc),
+                    datetime(2019,4,23,18,2,40,12,pytz.utc),
+                    False,
+                    True 
+                )
+                assert test_survey_version_4 not in nodes
+                assert test_survey_version_5 not in nodes
+                assert test_survey_version_6 in nodes
+                assert test_survey_version_7 in nodes
+                assert test_survey_version_8 not in nodes
+                assert len(nodes) == 2
+
+                nodes = test_survey_wrapper_3.get_survey_versions_between_datetime(
+                    datetime(2019,4,22,14,2,40,12,pytz.utc),
+                    datetime(2019,4,23,18,2,40,12,pytz.utc),
+                    True,
+                    True 
+                )
+                assert test_survey_version_4 not in nodes
+                assert test_survey_version_5 in nodes
+                assert test_survey_version_6 in nodes
+                assert test_survey_version_7 in nodes
+                assert test_survey_version_8 not in nodes
+                assert len(nodes) == 3 
+
 
 
 

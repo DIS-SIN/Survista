@@ -5,11 +5,20 @@ from src.database.db import get_db
 from datetime import datetime
 from neomodel.exceptions import DoesNotExist
 from neomodel import NodeSet
+from neomodel import Traversal
+from neomodel.match import OUTGOING
+from neomodel import Q
 class SurveyWrapper:
 
     def __init__(self, survey: Optional["sm.Survey"] = None) -> None:
         if survey is not None:
             self.survey = survey
+        self.survey_version_definition = dict(
+            node_class=sm.Survey,
+            direction=OUTGOING,
+            relation_type="SURVEY_VERSION",
+            model = sm.Survey_SurveyVersion_Rel
+        )
 
     @property
     def survey(self) -> "sm.Survey":
@@ -106,39 +115,47 @@ class SurveyWrapper:
         inclusive: bool = False
     ) -> NodeSet:
         if inclusive:
-           return self._survey.versions.match(addedOn_gte=thershhold)
-        return self._survey.versions.match(addedON_gt=thershhold)
+           return self._survey.versions.match(addedOn__gte=thershhold)
+        return self._survey.versions.match(addedOn__gt=thershhold)
     def get_survey_versions_between_datetime(
         self,
         thershhold_lower: datetime,
         thershhold_higher: datetime,
         thershhold_lower_inclusive: bool = True,
         thershhold_higher_inclusive: bool = False
-    ) -> NodeSet:
-        
+    ) -> list:
+        query = f"MATCH (s:Survey {{nodeId: '{self._survey.nodeId}'}})-[r:SURVEY_VERSION]->(sv:SurveyVersion) " 
         if thershhold_lower_inclusive and thershhold_higher_inclusive:
-            ns = self._survey.versions.match(
-                addedOn__gte=thershhold_lower,
-                addedOn__lte=thershhold_higher
+            query = (
+                query + f"WHERE r.addedOn >= {thershhold_lower.timestamp()} " + 
+                f"AND r.addedOn <= {thershhold_higher.timestamp()} "
             )
         elif thershhold_lower_inclusive:
-            ns = self._survey.versions.match(
-                addedOn__gte=thershhold_lower,
-                addedOn__lt=thershhold_higher    
+            query = (
+                query + f"WHERE r.addedOn >= {thershhold_lower.timestamp()} " + 
+                f"AND r.addedOn < {thershhold_higher.timestamp()} "
             )
         elif thershhold_higher_inclusive:
-            ns = self._survey.versions.match(
-                addedOn__gt=thershhold_lower,
-                addedOn__lte=thershhold_higher
+            query = (
+                query + f"WHERE r.addedOn > {thershhold_lower.timestamp()} " + 
+                f"AND r.addedOn <= {thershhold_higher.timestamp()} "
             )
         else:
-            ns = self._survey.versions.match(
-                addedOn__gt = thershhold_lower,
-                addedOn__lt = thershhold_higher
+           query = (
+                query + f"WHERE r.addedOn > {thershhold_lower.timestamp()} " + 
+                f"AND r.addedOn < {thershhold_higher.timestamp()} "
             )
-        return ns
+        query = query + "RETURN sv"
+        results, _ = get_db().cypher_query(query)
+        versions = []
+        for row in results:
+            versions.append(sm.SurveyVersion.inflate(row[0]))
+        return versions
     def save(self) -> None:
         self._survey.save()
+
+    def _get_nodeSet(self, relationship) -> NodeSet:
+        return NodeSet(relationship._new_traversal())
 
 
 

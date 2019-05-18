@@ -7,7 +7,6 @@ from neomodel.exceptions import DoesNotExist
 from neomodel import NodeSet
 from neomodel import Traversal
 from neomodel.match import OUTGOING
-from neomodel import Q
 class SurveyWrapper:
 
     def __init__(self, survey: Optional["sm.Survey"] = None) -> None:

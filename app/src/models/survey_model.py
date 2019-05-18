@@ -14,7 +14,8 @@ from neomodel import(
 from .relationships.survey_relationships import (
     Survey_Survey_Rel, 
     SurveyVersion_Question_Rel, 
-    Survey_SurveyVersion_Rel
+    Survey_SurveyVersion_Rel,
+    SurveyVersion_PreQuestion_Rel
 )
 
 from datetime import datetime
@@ -42,6 +43,9 @@ class Survey(SemiStructuredNode):
         "RELATED_SURVEY",
         model = Survey_Survey_Rel
     )
+    randomize = BooleanProperty(
+        default=True
+    )
 
 
 class SurveyVersion(SemiStructuredNode):
@@ -59,4 +63,9 @@ class SurveyVersion(SemiStructuredNode):
         '.question_model.Question',
         "SURVEY_QUESTION",
         model=SurveyVersion_Question_Rel
+    )
+    prequestions = RelationshipTo(
+        '.question_model.PreQuestion',
+        "SYRVEY_PRE_QUESTION",
+        model=SurveyVersion_PreQuestion_Rel
     )

@@ -39,7 +39,7 @@ class Survey(SemiStructuredNode):
         cardinality=OneOrMore
     )
     related_surveys = Relationship(
-        Survey,
+        'Survey',
         "RELATED_SURVEY",
         model = Survey_Survey_Rel
     )

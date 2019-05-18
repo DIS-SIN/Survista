@@ -28,12 +28,12 @@ class Question(SemiStructuredNode):
     question = StringProperty(unique_index=True)
     addedOn = DateTimeProperty(default_now=True)
     related_questions = Relationship(
-        Question,
+        'Question',
         'RELATED_QUESTION',
         model= Question_Question_Rel
     )
-    surveys = RelationshipFrom(
-        ".surver_model.SurveyVersion"
+    related_surveys = RelationshipFrom(
+        ".surver_model.SurveyVersion",
         "SURVEY_QUESTION",
         model=SurveyVersion_Question_Rel
     )
@@ -47,7 +47,7 @@ class PreQuestion(SemiStructuredNode):
     )
     randomize = BooleanProperty(default= False)
     related_prequestions = Relationship(
-        PreQuestion,
+        'PreQuestion',
         'RELATED_PRE_QUESTION',
         model= PreQuestion_PreQuestion_Rel
     )

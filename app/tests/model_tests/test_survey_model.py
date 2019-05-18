@@ -242,6 +242,90 @@ class Test_Survey_SurveyVersion_Relationship:
             
             assert len(test_Survey_1.versions.all()) == 2
 
+class Test_Survey_Survey_Relationship:
+    app = create_app(
+        mode="development",
+        static_path="../static",
+        templates_path="../templates",
+        instance_path="../instance"
+    )
+    def test_create_relationship(self):
+        with self.app.app_context():
+            from src.database.db import init_db, get_db, distroy_db
+            from src.models.survey_model import Survey
+            distroy_db(self.app)
+            init_db(self.app)
+
+            current_transaction = get_db().transaction
+
+            with current_transaction:
+                test_survey_1 = Survey(
+                    language="en",
+                    slug = "test_survey_1"
+                )
+                test_survey_1.save()
+                test_survey_2 = Survey(
+                    language="fr",
+                    slug = "test_survey_2"
+                )
+                test_survey_2.save()
+
+                rel = test_survey_1.related_surveys.connect(
+                    test_survey_2,
+                    {
+                        'reason': 'language',
+                        'description': "These surveys are related"
+                    }
+                )
+            pytest.test_survey_1 = test_survey_1
+            pytest.test_survey_2 = test_survey_2
+            pytest.test_survey_survey_rel_1 = rel
+    
+    def test_addedOn_field_is_datetime(self):
+        
+        assert pytest.test_survey_survey_rel_1.addedOn is not None
+        assert isinstance(pytest.test_survey_survey_rel_1.addedOn, datetime)
+
+    def test_reason_field_choices(self):
+        with self.app.app_context():
+            from src.database.db import get_db
+
+            current_transaction = get_db().transaction
+
+            with current_transaction:
+                test_survey_survey_rel_1 = pytest.test_survey_survey_rel_1
+                test_survey_survey_rel_1.reason = "similar"
+                test_survey_survey_rel_1.save()
+                test_survey_survey_rel_1.reason = "shorter"
+                test_survey_survey_rel_1.save()
+                test_survey_survey_rel_1.reason = "language"
+                test_survey_survey_rel_1.save()
+    
+    def test_reason_field_required_constraint(self):
+        with self.app.app_context():
+            from src.database.db import get_db
+            from src.models.survey_model import Survey
+            from neomodel.exceptions import RequiredProperty
+
+            current_transaction = get_db().transaction
+
+            with current_transaction:
+                test_survey_1 = pytest.test_survey_1
+                test_survey_3 = Survey(
+                    language = "en",
+                    slug = "test_survey_3"
+                )
+                test_survey_3.save()
+                with pytest.raises(RequiredProperty):
+                    test_survey_1.related_surveys.connect(test_survey_3)
+                test_survey_1.related_surveys.connect(
+                    test_survey_3,
+                    {
+                        'reason': 'similar'
+                    }
+                )
+
+    
 
                 
 

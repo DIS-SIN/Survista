@@ -33,7 +33,7 @@ class Question(SemiStructuredNode):
         model= Question_Question_Rel
     )
     related_surveys = RelationshipFrom(
-        ".surver_model.SurveyVersion",
+        ".survey_model.SurveyVersion",
         "SURVEY_QUESTION",
         model=SurveyVersion_Question_Rel
     )

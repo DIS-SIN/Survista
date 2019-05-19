@@ -160,5 +160,119 @@ class Test_Question_Model_CRD():
             )
             assert not deletedNode[0]
 
+class Test_PreQuestion_Model_CRD:
+
+    app = create_app(
+        mode = "development",
+        static_path="../static",
+        instance_path="../instance",
+        templates_path="../templates"
+    )
+
+    def test_create_node(self):
+        with self.app.app_context():
+            from src.database.db import init_db, distroy_db, get_db
+            from src.models.question_model import PreQuestion
+       
+            distroy_db(self.app)
+            init_db(self.app)
+
+            current_transaction = get_db().transaction
+
+            with current_transaction:
+                test_prequestion_1 = PreQuestion(
+                    slug = "test_prequestion_1",
+                    language="en",
+                    text= "This is an example PreQuestion"
+                )
+                test_prequestion_1.save()
+                pytest.test_prequestion_1 = test_prequestion_1
+    
+    def test_addedOn_field_is_datetime(self):
+        assert pytest.test_prequestion_1.addedOn is not None
+        assert isinstance(pytest.test_prequestion_1.addedOn, datetime)
+    
+    def test_randomize_field_is_false(self):
+        assert pytest.test_prequestion_1.randomize is False
+    
+    def test_language_field_options_constraint(self):
+        with self.app.app_context():
+            from src.database.db import get_db
+            from neomodel.exceptions import DeflateError
+            test_prequestion_1 = pytest.test_prequestion_1
+
+            with get_db().transaction:
+                test_prequestion_1.language = "fr"
+                test_prequestion_1.save()
+                test_prequestion_1.language = "en"
+                test_prequestion_1.save()
+                with pytest.raises(DeflateError):
+                    test_prequestion_1.language = "ar"
+                    test_prequestion_1.save()
+
+    def test_slug_field_required_constraint(self):
+        with self.app.app_context():
+            from src.database.db import get_db
+            from src.models.question_model import PreQuestion
+            from neomodel.exceptions import RequiredProperty
+
+            current_transaction = get_db().transaction
+
+            with current_transaction:
+                test_prequestion_2 = PreQuestion(
+                    language="en",
+                    text="This an example PreQuestion 2"
+                )
+                with pytest.raises(RequiredProperty):
+                    test_prequestion_2.save()
+                test_prequestion_2.slug = "test_prequestion_2"
+                test_prequestion_2.save()
+    
+    def test_slug_field_is_unique_constraint(self):
+        with self.app.app_context():
+            from src.database.db import get_db
+            from neomodel.exceptions import UniqueProperty
+            from src.models.question_model import PreQuestion
+
+            current_transaction = get_db().transaction
+
+            with pytest.raises(UniqueProperty):
+                with current_transaction:
+                    test_prequestion_3 = PreQuestion(
+                        slug="test_prequestion_1",
+                        language="en",
+                        text="This is an example PreQuestion 3"
+                    )
+                    test_prequestion_3.save()
+            
+            with current_transaction:
+                test_prequestion_3.slug = "test_prequestion_3"
+                test_prequestion_3.save()
+
+    def test_text_field_required_constraint(self):
+        with self.app.app_context():
+            from src.database.db import get_db
+            from neomodel.exceptions import RequiredProperty
+            from src.models.question_model import PreQuestion
+
+            current_transaction = get_db().transaction
+
+            with current_transaction:
+                test_prequestion_4 = PreQuestion(
+                    slug = "test_prequestion_4",
+                    language = "en"
+                )
+                with pytest.raises(RequiredProperty):
+                    test_prequestion_4.save()
+                test_prequestion_4.text = "This is an example Prequestion 4"
+                test_prequestion_4.save()
+
+
+    
+
+
+
+
+
 
 

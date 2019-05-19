@@ -45,7 +45,9 @@ class PreQuestion(SemiStructuredNode):
         'fr': 'French'
       }
     )
-    randomize = BooleanProperty(default= False)
+    text = StringProperty(required=True)
+    randomize = BooleanProperty(default=False)
+    addedOn = DateTimeProperty(default_now=True)
     related_prequestions = Relationship(
         'PreQuestion',
         'RELATED_PRE_QUESTION',

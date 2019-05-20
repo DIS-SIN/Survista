@@ -240,7 +240,3 @@ class SurveyWrapper:
     def save(self) -> None:
         self._survey.save()
 
-
-class VersionsHeap:
-    
-  

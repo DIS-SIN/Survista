@@ -17,9 +17,14 @@ from .question_wrapper import QuestionWrapper
 # Current Version wrapper that extends base version functionailty ?? 
 class SurveyVersionWrapper:
 
-    def __init__(self, version: Optional["sm.SurveyVersion"] = None) -> None:
+    def __init__(self, version: Optional["sm.SurveyVersion"] = None, 
+                 parent_wrapper: Optional["SurveyWrapper"] = None) -> None:
         if version is not None:
             self.version = version
+        if parent_wrapper is not None:
+            self.parent_wrapper = parent_wrapper
+    
+    
     @property
     def isCurrentVersion(self) -> bool:
         return self._isCurrentVersion
@@ -48,6 +53,19 @@ class SurveyVersionWrapper:
             self._questions.append(QuestionWrapper(question))
         
         return self._questions
+    
+    @property
+    def parent_wrapper(self) -> "SurveyWrapper":
+        return self._parent_wrapper
+
+    @parent_wrapper.setter
+    def parent_wrapper(self, parent_wrapper: "SurveyWrapper"):
+        if parent_wrapper.contains_version(self._version):
+            self._parent_wrapper = parent_wrapper
+        raise ValueError(
+            f"The SurveyVersion in this wrapper does not exist in the survey slug: {parent_wrapper.slug} " +
+            f"nodeId: {parent_wrapper.nodeId}"
+        )
 
 class CurrentSurveyVersionWrapper(SurveyVersionWrapper):
     pass
@@ -62,6 +80,13 @@ class SurveyWrapper:
             relation_type="SURVEY_VERSION",
             model = sm.Survey_SurveyVersion_Rel
         )
+    @property
+    def slug(self) -> str:
+        return self._slug
+    
+    @property
+    def nodeId(self) -> str:
+        return self._nodeId
 
     @property
     def survey(self) -> "sm.Survey":
@@ -74,6 +99,8 @@ class SurveyWrapper:
         
         survey = cast(sm.Survey, survey)
         self._survey = survey
+        self._slug = survey.slug
+        self._nodeId = survey.nodeId
     
     @property
     def currentVersionNode(self) -> "sm.SurveyVersion":
@@ -206,10 +233,14 @@ class SurveyWrapper:
                 SurveyVersionWrapper(sm.SurveyVersion.inflate(row[0]))
             )
         return versions
+    
+    def contains_version(self, version: "sm.SurveyVersion") -> bool:
+        return version in self._survey.versions
 
     def save(self) -> None:
         self._survey.save()
 
 
-
+class VersionsHeap:
+    
   

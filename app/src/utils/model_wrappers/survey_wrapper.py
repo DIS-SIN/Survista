@@ -1,14 +1,58 @@
-from typing import Optional, Union, cast
+from typing import Optional, Union, cast, List
 from src.utils.exceptions.wrapper_exceptions import NoCurrentVersionFound, VersionDoesNotBelongToNode
 import src.models.survey_model as sm
+import src.models.question_model as qm
+
 from src.database.db import get_db
 from datetime import datetime
 from neomodel.exceptions import DoesNotExist
-from neomodel import NodeSet
-from neomodel import Traversal
+from neomodel import NodeSet, Traversal, RelationshipManager
 from neomodel.match import OUTGOING
-class SurveyWrapper:
+from .question_wrapper import QuestionWrapper
 
+# TODO 
+# Question and PreQuestion Wrappers 
+# Version Comparitor functions
+# Version update function
+# Current Version wrapper that extends base version functionailty ?? 
+class SurveyVersionWrapper:
+
+    def __init__(self, version: Optional["sm.SurveyVersion"] = None) -> None:
+        if version is not None:
+            self.version = version
+    @property
+    def isCurrentVersion(self) -> bool:
+        return self._isCurrentVersion
+    
+    @property
+    def version(self) -> "sm.SurveyVersion":
+        return self._version
+    
+    @version.setter
+    def version(self, version: Union["sm.SurveyVersion", str]):
+        if isinstance(version, str):
+            version = sm.SurveyVersion.nodes.get(nodeId=version)
+        version = cast(sm.SurveyVersion, version)
+        self._version = version
+        self._questionsManager = self._version.questions
+        self._questionsConsumed = False
+        self._isCurrentVersion = version.currentVersion
+    
+    @property
+    def questions(self) -> List[QuestionWrapper]:
+        if hasattr(self, "_questions"):
+            return self._questions
+        
+        self._questions = [] # type: List[QuestionWrapper]
+        for question in self._questionsManager:
+            self._questions.append(QuestionWrapper(question))
+        
+        return self._questions
+
+class CurrentSurveyVersionWrapper(SurveyVersionWrapper):
+    pass
+
+class SurveyWrapper:
     def __init__(self, survey: Optional["sm.Survey"] = None) -> None:
         if survey is not None:
             self.survey = survey
@@ -32,7 +76,11 @@ class SurveyWrapper:
         self._survey = survey
     
     @property
-    def currentVersion(self) -> "sm.SurveyVersion":
+    def currentVersionNode(self) -> "sm.SurveyVersion":
+        return self._currentVersionNode
+
+    @property
+    def currentVersion(self) -> CurrentSurveyVersionWrapper:
         # check if we have already assigned the private variable
         if hasattr(self,"_currentVersion") and self._currentVersion is not None:
             return self._currentVersion
@@ -66,27 +114,30 @@ class SurveyWrapper:
         except AssertionError:
             raise VersionDoesNotBelongToNode("The version you are trying to attach does not belong to this survey")
         # assign the version to the private variable
-        self._currentVersion = currentVersion
+        self._currentVersionNode = currentVersion
 
         # if the version does not have a survey then create a relationship and set currentVersion bool flag
         if currentVersionSurvey is None:
-            self._currentVersion.currentVersion = True
-            self._currentVersion.save()
-            self._survey.versions.connect(self._currentVersion)
+            self._currentVersionNode.currentVersion = True
+            self._currentVersionNode.save()
+            self._survey.versions.connect(self._currentVersionNode)
         # if the currentVersion bool flag is not true then set this to be true
-        if self._currentVersion.currentVersion != True:
-            self._currentVersion.currentVersion = True
-            self._currentVersion.save()
+        if self._currentVersionNode.currentVersion != True:
+            self._currentVersionNode.currentVersion = True
+            self._currentVersionNode.save()
         
         for version in self._survey.versions:
             if version != self._currentVersion:
                 version.currentVersion = False
                 version.save()
-    
+        # finally wrap the current version in it's current version wrapper
+        self._currentVersion = CurrentSurveyVersionWrapper(self._currentVersionNode) # type: CurrentSurveyVersionWrapper
+
     def set_survey_variables(self,**kwargs) -> None:
         for key in kwargs:
             setattr(self._survey, key, kwargs[key])
         self.save()
+
     def get_survey_version(
         self,
         nodeId: Optional[str] = None,
@@ -100,6 +151,7 @@ class SurveyWrapper:
             return self._survey.versions.filter(title=title).first()
         else:
             raise ValueError("You must provide wither nodeId, addedOn, or title")
+
     def get_survey_versions_lt_datetime(
         self,
         thershhold: datetime,
@@ -116,13 +168,15 @@ class SurveyWrapper:
         if inclusive:
            return self._survey.versions.match(addedOn__gte=thershhold)
         return self._survey.versions.match(addedOn__gt=thershhold)
+    
     def get_survey_versions_between_datetime(
         self,
         thershhold_lower: datetime,
         thershhold_higher: datetime,
         thershhold_lower_inclusive: bool = True,
         thershhold_higher_inclusive: bool = False
-    ) -> list:
+    ) -> List[SurveyVersionWrapper]:
+
         query = f"MATCH (s:Survey {{nodeId: '{self._survey.nodeId}'}})-[r:SURVEY_VERSION]->(sv:SurveyVersion) " 
         if thershhold_lower_inclusive and thershhold_higher_inclusive:
             query = (
@@ -148,13 +202,13 @@ class SurveyWrapper:
         results, _ = get_db().cypher_query(query)
         versions = []
         for row in results:
-            versions.append(sm.SurveyVersion.inflate(row[0]))
+            versions.append(
+                SurveyVersionWrapper(sm.SurveyVersion.inflate(row[0]))
+            )
         return versions
+
     def save(self) -> None:
         self._survey.save()
-
-    def _get_nodeSet(self, relationship) -> NodeSet:
-        return NodeSet(relationship._new_traversal())
 
 
 

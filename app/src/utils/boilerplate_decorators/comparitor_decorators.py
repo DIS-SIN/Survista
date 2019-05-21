@@ -1,10 +1,10 @@
 from typing import Callable, Any, TypeVar
-
+import src.utils.datastructures.node_heap as nh
 T = TypeVar('T')
 
 def comp_wrapper(func: Callable[[T, Any], bool]) -> Callable[[T, Any], bool]:
     def comp_func(self, other):
-        if not isinstance(other, HeapNode):
+        if not isinstance(other, nh.HeapNode):
             TypeError(f"other must be of type HeapNode but got {type(other)}")
         elif other.key != self.key:
             raise ValueError(

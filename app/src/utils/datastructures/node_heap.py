@@ -31,6 +31,8 @@ class HeapNode(Generic[T]):
             self._right = right
             right.parent = self
             self.item_swap(right)
+        else:
+            self._right = right
     
     @property
     def left(self) -> "HeapNode[T]":
@@ -42,7 +44,9 @@ class HeapNode(Generic[T]):
             assert isinstance(left, HeapNode)
             self._left = left
             left.parent = self
-            self.item_swap(left) 
+            self.item_swap(left)
+        else:
+            self._left = left
         
     @comp_wrapper
     def __eq__(self, other) -> bool:    
@@ -86,9 +90,9 @@ class HeapNode(Generic[T]):
 
 class NodeHeap(Generic[T]):
     def __init__(self, type: str, key: str, nodeArray: Optional[List[T]] = None) -> None:
-        self.nodeArray = nodeArray
         self.type = type
         self.key = key
+        self.nodeArray = nodeArray
     
     @property
     def nodeArray(self) -> List[T]:
@@ -98,8 +102,12 @@ class NodeHeap(Generic[T]):
     def nodeArray(self, nodeArray: List[T]):
         self._nodeArray = nodeArray
         self.root = HeapNode(nodeArray[0], self.key, self.type)
+        self._nodeCount = 1
         self.__buildHeap(self.root, nodeArray, 1)
-        
+
+    @property
+    def nodeCount(self) -> int:
+        return self._nodeCount    
     
     def __buildHeap(self, tree: HeapNode[T], nodeArray: List[T], currentIndex: int):
         if currentIndex >= len(nodeArray):
@@ -109,5 +117,6 @@ class NodeHeap(Generic[T]):
         else:
             tree.right = HeapNode(nodeArray[currentIndex], self.key, self.type)
         currentIndex += 1
+        self._nodeCount += 1
         self.__buildHeap(tree, nodeArray, currentIndex)
 

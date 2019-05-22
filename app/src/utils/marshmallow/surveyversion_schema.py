@@ -1,7 +1,7 @@
-from marshmallow import schema
+from marshmallow import Schema
 from marshmallow.fields import Boolean, Str, DateTime
 
-class SurveyVersionSchema(schema):
+class SurveyVersionSchema(Schema):
     nodeId = Str()
     title = Str()
     currentVersion = Boolean()

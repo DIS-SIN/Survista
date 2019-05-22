@@ -9,7 +9,8 @@ T = TypeVar('T')
 
 class HeapNode(Generic[T]):
 
-    def __init__(self, item: T, key: str, heap_type: str,
+    def __init__(self,key: str, heap_type: str,
+                 item: Optional[T] = None,
                  left: Optional["HeapNode[T]"] = None, 
                  right: Optional["HeapNode[T]"]= None,
                  parent: Optional["HeapNode[T]"] = None) -> None:
@@ -102,20 +103,35 @@ class NodeHeap(Generic[T]):
     def nodeArray(self, nodeArray: List[T]):
         self._nodeArray = nodeArray
         self.root = HeapNode(nodeArray[0], self.key, self.type)
+        self._last = self.root
         self._nodeCount = 1
         self.__buildHeap(self.root, nodeArray, 1)
 
     @property
     def nodeCount(self) -> int:
-        return self._nodeCount    
+        return self._nodeCount
+
+    def addNode(self, node: T) -> T:
+        if self._last.left = None:
+            self._last.left = HeapNode(node, self.key, self.type)
+        elif self._last.right = None:
+            self._last.right = HeapNode(node,self.key,self.type)
+        elif self._last.parent is not None and self._last.parent.right.left is None:
+            self._last = self._last.parent.right
+            self.addNode(node)
+        
+
+
     
     def __buildHeap(self, tree: HeapNode[T], nodeArray: List[T], currentIndex: int):
         if currentIndex >= len(nodeArray):
             return
         if tree.left is None:
             tree.left = HeapNode(nodeArray[currentIndex], self.key, self.type)
-        else:
+        elif tree.right is None:
             tree.right = HeapNode(nodeArray[currentIndex], self.key, self.type)
+        else:
+            tree = tree.left
         currentIndex += 1
         self._nodeCount += 1
         self.__buildHeap(tree, nodeArray, currentIndex)

@@ -8,9 +8,9 @@ class SurveySchema(Schema):
     language = Str()
     randomize = Boolean()
     addedOn = DateTime()
-    currentVersion = CurrentVersion(attribute="versions")
-    versions= Nested('SurveyVersionSchema',
-                      only=["nodeId"], many=True)
+    #currentVersion = CurrentVersion(attribute="versions", dump_only = True)
+    #versions= Nested('SurveyVersionSchema',
+                      only=["nodeId"], many=True, dump_only=True)
             
 
 

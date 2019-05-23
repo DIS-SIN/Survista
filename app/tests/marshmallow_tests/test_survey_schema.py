@@ -27,8 +27,7 @@ class Test_Survey_Schema_Dump:
                     language = "en",
                 )
                 test_survey_1.save()
-            
-            test_output_1 = SurveySchema().dump(test_survey_1)
+                test_output_1 = SurveySchema().dump(test_survey_1)
             pytest.test_survey_1 = test_survey_1
             pytest.test_output_1_data = test_output_1.data
             assert bool(test_output_1.errors) is False 
@@ -38,7 +37,9 @@ class Test_Survey_Schema_Dump:
                                     '%Y-%m-%dT%H:%M:%S.%f%z')
         assert addedOn == pytest.test_survey_1.addedOn
     
-    def test_nested_surveyversion(self):
+    # decided to remove the nesting responsability from marshmallo to the wrappers for efficiency
+
+    """def test_nested_surveyversion(self):
         with self.app.app_context():
             from src.database.db import get_db
             from src.models.survey_model import SurveyVersion
@@ -55,17 +56,16 @@ class Test_Survey_Schema_Dump:
                 test_survey_1.versions.connect(
                     test_surveyversion_1
                 )
-            pytest.test_surveyversion_1 = test_surveyversion_1
+                pytest.test_surveyversion_1 = test_surveyversion_1
 
-            test_output_2 = SurveySchema().dump(
-                test_survey_1
-            )
-            
+                test_output_2 = SurveySchema().dump(
+                    test_survey_1
+                )
+                
             pytest.test_output_2_data = test_output_2.data
             assert bool(test_output_2.errors) is False
     
     def test_versions_field_is_array(self):
-        
         output_versions_field = pytest.test_output_2_data['versions']
         assert output_versions_field is not None
         assert len(output_versions_field) == 1
@@ -75,7 +75,38 @@ class Test_Survey_Schema_Dump:
         assert output_currentVersion_field is None
     
     def test_multiple_nested_versions(self):
-        with app.app
+        with self.app.app_context():
+            from src.database.db import get_db
+            from src.models.survey_model import SurveyVersion
+            from src.utils.marshmallow.survey_schema import SurveySchema
+
+            current_transaction = get_db().transaction
+
+            with current_transaction:
+                test_survey_1 = pytest.test_survey_1
+                test_surveyversion_2 = SurveyVersion(
+                    title = "Test Survey Version 2",
+                    currentVersion = True
+                )
+                test_surveyversion_2.save()
+                test_survey_1.versions.connect(test_surveyversion_2)
+
+                test_output_3 = SurveySchema().dump(test_survey_1)
+
+                pytest.test_output_3_data = test_output_3.data
+                
+            
+            assert bool(test_output_3.errors) is False
+    
+    def test_currentVersion_field_is_nested_version(self):
+        currentVersion  = pytest.test_output_3_data['currentVersion']
+        assert currentVersion is not None
+        assert currentVersion['nodeId'] is not None
+        assert currentVersion['title'] is not None """
+
+
+
+
 
 
 

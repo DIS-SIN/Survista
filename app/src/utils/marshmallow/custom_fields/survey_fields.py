@@ -8,7 +8,7 @@ class CurrentVersion(Field):
         if version is None:
             return None
         else:
-            return SurveyVersionSchema().dump(version)
+            return SurveyVersionSchema(exclude=('currentVersion', )).dump(version).data
 
 
         

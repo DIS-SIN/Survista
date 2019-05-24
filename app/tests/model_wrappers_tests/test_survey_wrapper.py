@@ -3,6 +3,7 @@ import pytest
 from src.utils.model_wrappers.survey_wrapper import SurveyWrapper
 from datetime import datetime
 import pytz
+
 class Test_Survey_Wrapper:
 
     app = create_app(
@@ -36,13 +37,13 @@ class Test_Survey_Wrapper:
         test_survey_wrapper_1 = SurveyWrapper(test_survey_1)
         pytest.test_survey_wrapper_1 = test_survey_wrapper_1 # type: SurveyWrapper
     
-    def test_SurveyWrapper_survey_getter(self):
+    def test_survey_getter(self):
         test_survey_wrapper_1 = pytest.test_survey_wrapper_1 # type: SurveyWrapper
         got_test_survey_1 = test_survey_wrapper_1.survey
 
         assert got_test_survey_1 == pytest.test_survey_1
     
-    def test_SurveyWrapper_survey_setter(self):
+    def test_survey_setter(self):
         with self.app.app_context():
             from src.database.db import get_db
             from src.models.survey_model import Survey
@@ -61,7 +62,7 @@ class Test_Survey_Wrapper:
 
             assert test_survey_wrapper_1._survey == test_survey_2
     
-    def test_SurveyWrapper_currentVersion_getter_no_versions(self):
+    def test_currentVersion_getter_no_versions(self):
         with self.app.app_context():
             from src.database.db import get_db
             from src.utils.exceptions.wrapper_exceptions import NoCurrentVersionFound
@@ -74,7 +75,7 @@ class Test_Survey_Wrapper:
                 with pytest.raises(NoCurrentVersionFound):
                     test_survey_wrapper_1.currentVersion
     
-    def test_SurveyWrapper_currentVersion_getter_with_version(self):
+    def test_currentVersion_getter_with_version(self):
         with self.app.app_context():
             from src.database.db import get_db
             from src.models.survey_model import SurveyVersion
@@ -95,7 +96,7 @@ class Test_Survey_Wrapper:
                 assert test_survey_version_1 in test_survey.versions
                 assert test_survey_wrapper_1.currentVersionNode == test_survey_version_1
 
-    def test_SurveyWrapper_currentVersion_setter_with_node(self):
+    def test_currentVersion_setter_with_node(self):
         with self.app.app_context():
             from src.database.db import get_db
             from src.models.survey_model import SurveyVersion
@@ -113,7 +114,7 @@ class Test_Survey_Wrapper:
 
                 assert test_survey_version_2.currentVersion is True
     
-    def test_SurveyWrapper_currentVersion_setter_with_nodeId(self):
+    def test_currentVersion_setter_with_nodeId(self):
         with self.app.app_context():
             from src.database.db import get_db
             from src.models.survey_model import SurveyVersion
@@ -132,7 +133,7 @@ class Test_Survey_Wrapper:
                 test_survey_version_3.refresh()
                 assert test_survey_version_3.currentVersion is True
     
-    def test_SurveyWrapper_currentVersion_setter_node_from_another_parent(self):
+    def test_currentVersion_setter_node_from_another_parent(self):
         with self.app.app_context():
             from src.database.db import get_db
             from src.models.survey_model import SurveyVersion
@@ -152,7 +153,7 @@ class Test_Survey_Wrapper:
                 test_survey_wrapper_1 = pytest.test_survey_wrapper_1
                 with pytest.raises(VersionDoesNotBelongToNode):
                     test_survey_wrapper_1.currentVersion = test_survey_version_4
-    def test_SurveyWrapper_set_survey_variables_method(self):
+    def test_set_survey_variables_method(self):
         with self.app.app_context():
             from src.database.db import get_db
             from src.models.survey_model import SurveyVersion
@@ -171,7 +172,7 @@ class Test_Survey_Wrapper:
                 assert some_survey.some_var == "some_var"
                 assert some_survey.some_other_var == "some_other_var"
 
-    def test_setup_for_SurveyWrapper_datetime_filtering_methods(self):
+    def test_setup_for_datetime_filtering_methods(self):
         with self.app.app_context():
             from src.database.db import get_db
             from src.models.survey_model import Survey,SurveyVersion
@@ -234,7 +235,7 @@ class Test_Survey_Wrapper:
                 pytest.test_survey_version_7 = test_survey_version_7
                 pytest.test_survey_version_8 = test_survey_version_8
                 pytest.test_survey_wrapper_3 = test_survey_wrapper_3
-    def test_SurveyWrapper_get_survey_versions_lt_datetime(self):
+    def tes_get_survey_versions_lt_datetime(self):
         with self.app.app_context():
             from src.database.db import get_db
             
@@ -270,7 +271,7 @@ class Test_Survey_Wrapper:
                 assert test_survey_version_8 not in nodes
                 assert len(nodes) == 4
     
-    def test_SurveyWrapper_get_survey_versions_gt_datetime(self):
+    def test_get_survey_versions_gt_datetime(self):
         with self.app.app_context():
             from src.database.db import get_db
 
@@ -308,7 +309,7 @@ class Test_Survey_Wrapper:
                 assert test_survey_version_8 in nodes
                 assert len(nodes) == 4
     
-    def test_SurveyWrapper_get_survey_versions_between_datetime(self):
+    def test_get_survey_versions_between_datetime(self):
         with self.app.app_context():
             from src.database.db import get_db
 
@@ -326,21 +327,6 @@ class Test_Survey_Wrapper:
                 nodes = test_survey_wrapper_3.get_survey_versions_between_datetime(
                     datetime(2019,4,22,14,2,40,12,pytz.utc),
                     datetime(2019,4,23,18,2,40,12,pytz.utc),
-                )
-                
-                for i in range(0,len(nodes)):
-                    nodes[i] = nodes[i].version
-
-                assert test_survey_version_4 not in nodes
-                assert test_survey_version_5 in nodes
-                assert test_survey_version_6 in nodes
-                assert test_survey_version_7 not in nodes
-                assert test_survey_version_8 not in nodes
-                assert len(nodes) == 2
-
-                nodes = test_survey_wrapper_3.get_survey_versions_between_datetime(
-                    datetime(2019,4,22,14,2,40,12,pytz.utc),
-                    datetime(2019,4,23,18,2,40,12,pytz.utc),
                     False,
                     False
                 )
@@ -353,6 +339,51 @@ class Test_Survey_Wrapper:
                 assert test_survey_version_7 not in nodes
                 assert test_survey_version_8 not in nodes
                 assert len(nodes) == 1
+
+    def test_get_survey_versions_between_datetime_lower_inclusive_higher_not_inclusive(self):
+        with self.app.app_context():
+            from src.database.db import get_db
+
+            current_transaction = get_db().transaction
+
+            with current_transaction:
+                test_survey_version_4 = pytest.test_survey_version_4
+                test_survey_version_5 = pytest.test_survey_version_5
+                test_survey_version_6 = pytest.test_survey_version_6
+                test_survey_version_7 = pytest.test_survey_version_7
+                test_survey_version_8 = pytest.test_survey_version_8
+
+                test_survey_wrapper_3 = pytest.test_survey_wrapper_3
+                
+                nodes = test_survey_wrapper_3.get_survey_versions_between_datetime(
+                    datetime(2019,4,22,14,2,40,12,pytz.utc),
+                    datetime(2019,4,23,18,2,40,12,pytz.utc),
+                )
+
+                for i in range(0,len(nodes)):
+                    nodes[i] = nodes[i].version
+
+                assert test_survey_version_4 not in nodes
+                assert test_survey_version_5 in nodes
+                assert test_survey_version_6 in nodes
+                assert test_survey_version_7 not in nodes
+                assert test_survey_version_8 not in nodes
+                assert len(nodes) == 2
+    
+    def test_get_survey_versions_between_datetime_lower_not_inclusive_higher_inclusive(self):
+        with self.app.app_context():
+            from src.database.db import get_db
+
+            current_transaction = get_db().transaction
+
+            with current_transaction:
+                test_survey_version_4 = pytest.test_survey_version_4
+                test_survey_version_5 = pytest.test_survey_version_5
+                test_survey_version_6 = pytest.test_survey_version_6
+                test_survey_version_7 = pytest.test_survey_version_7
+                test_survey_version_8 = pytest.test_survey_version_8
+
+                test_survey_wrapper_3 = pytest.test_survey_wrapper_3
 
                 nodes = test_survey_wrapper_3.get_survey_versions_between_datetime(
                     datetime(2019,4,22,14,2,40,12,pytz.utc),
@@ -369,7 +400,21 @@ class Test_Survey_Wrapper:
                 assert test_survey_version_7 in nodes
                 assert test_survey_version_8 not in nodes
                 assert len(nodes) == 2
+    def test_get_survey_versions_between_datetime_lower_inclusive_higher_inclusive(self):
+        with self.app.app_context():
+            from src.database.db import get_db
 
+            current_transaction = get_db().transaction
+
+            with current_transaction:
+                test_survey_version_4 = pytest.test_survey_version_4
+                test_survey_version_5 = pytest.test_survey_version_5
+                test_survey_version_6 = pytest.test_survey_version_6
+                test_survey_version_7 = pytest.test_survey_version_7
+                test_survey_version_8 = pytest.test_survey_version_8
+
+                test_survey_wrapper_3 = pytest.test_survey_wrapper_3
+                
                 nodes = test_survey_wrapper_3.get_survey_versions_between_datetime(
                     datetime(2019,4,22,14,2,40,12,pytz.utc),
                     datetime(2019,4,23,18,2,40,12,pytz.utc),
@@ -385,7 +430,7 @@ class Test_Survey_Wrapper:
                 assert test_survey_version_7 in nodes
                 assert test_survey_version_8 not in nodes
                 assert len(nodes) == 3 
-    
+
     def test_SurveyWrapper_dump_method(self):
         with self.app.app_context():
             from src.database.db import get_db

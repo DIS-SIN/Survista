@@ -431,7 +431,7 @@ class Test_Survey_Wrapper:
                 assert test_survey_version_8 not in nodes
                 assert len(nodes) == 3 
 
-    def test_SurveyWrapper_dump_method(self):
+    def test_dump_method(self):
         with self.app.app_context():
             from src.database.db import get_db
 
@@ -443,6 +443,66 @@ class Test_Survey_Wrapper:
                 output = test_survey_wrapper_3.dump()
             
             pytest.test_output_1 = output
+    
+    def test_dump_contains_currentVersionNode(self):
+        test_output_1 = pytest.test_output_1
+        assert test_output_1['currentVersionNode'] is not None
+    
+    def test_dump_contains_versions(self):
+        test_output_1 = pytest.test_output_1
+        assert test_output_1['versions'] is not None
+    
+    def test_currentVersionNode_not_include_survey(self):
+        with pytest.raises(KeyError):
+            pytest.test_output_1['currentVersionNode']['survey']
+    
+    def test_dump_excludes_argument(self):
+        with self.app.app_context():
+            from src.database.db import get_db
+            
+            current_transaction = get_db().transaction
+
+            with current_transaction:
+
+                test_survey_wrapper_3 = pytest.test_survey_wrapper_3
+
+                test_output_2 = test_survey_wrapper_3.dump(exclude=['slug'])
+            
+            with pytest.raises(KeyError):
+                test_output_2['slug']
+    
+    def test_dump_excludes_versions_argument(self):
+        with self.app.app_context():
+            from src.database.db import get_db
+            
+            current_transaction = get_db().transaction
+
+            with current_transaction:
+
+                test_survey_wrapper_3 = pytest.test_survey_wrapper_3
+
+                test_output_3 = test_survey_wrapper_3.dump(exclude=['versions'])
+            
+            with pytest.raises(KeyError):
+                test_output_3['versions']
+    
+    def test_dump_excludes_currentVersionNode_argument(self):
+        with self.app.app_context():
+            from src.database.db import get_db
+
+            current_transaction = get_db().transaction
+
+            with current_transaction:
+
+                test_survey_wrapper_3 = pytest.test_survey_wrapper_3
+
+                test_output_3 = test_survey_wrapper_3.dump(exclude=['currentVersionNode'])
+            
+            with pytest.raises(KeyError):
+                test_output_3['currentVersionNode']
+
+
+            
     
     
 

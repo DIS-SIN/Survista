@@ -10,6 +10,7 @@ from neomodel import NodeSet, Traversal, RelationshipManager
 from neomodel.match import OUTGOING
 from .question_wrapper import QuestionWrapper
 from src.utils.marshmallow.survey_schema import SurveySchema
+from src.utils.marshmallow.surveyversion_schema import SurveyVersionSchema
 
 # TODO 
 # Question and PreQuestion Wrappers 
@@ -62,26 +63,63 @@ class SurveyVersionWrapper:
     def parent_wrapper(self, parent_wrapper: "SurveyWrapper"):
         if parent_wrapper.contains_version(self._version):
             self._parent_wrapper = parent_wrapper
-        raise ValueError(
-            f"The SurveyVersion in this wrapper does not exist in the survey slug: {parent_wrapper.slug} " +
-            f"nodeId: {parent_wrapper.nodeId}"
-        )
+        else:
+            raise ValueError(
+                f"The SurveyVersion in the parent wrapper does not exist in the survey slug: {parent_wrapper.slug} " +
+                f"nodeId: {parent_wrapper.nodeId}"
+            )
     
-    def dump(self, exclude: Optional[List[str]] = None, only: Optional[List[str]])
+    def dump(self, exclude: Optional[List[str]] = None, only: Optional[List[str]] = None):
+        if only is not None and len(only) == 1 and only[0] == 'survey':
+            return self._get_survey_dump(exclude=exclude)
+        elif exclude is None and only is None:
+            version_dump = SurveyVersionSchema().dump(self.version)
+            survey_dump  = self._get_survey_dump(exclude=exclude)
+            version_dump['survey'] = survey_dump
+        elif exclude is not None and only is None:
+            version_dump = SurveyVersionSchema(exclude=tuple(exclude)).dump(self.version).data
+            if 'survey' not in exclude:
+                survey_dump = self._get_survey_dump(exclude=exclude)
+                version_dump['survey'] = survey_dump
+        elif exclude is None and only is not None:
+            original_only = only
+            if 'survey' in only:
+                only.remove('survey')
+            version_dump = SurveyVersionSchema(only=only).dump(self.version)
+            if 'survey' in original_only:
+                survey_dump = self._get_survey_dump(exclude=exclude)
+                version_dump['survey'] = survey_dump
+        else:
+            raise ValueError('exclude and only are mutaually exclusive')
+        return version_dump
+    
+    def _get_survey_dump(self, exclude: Optional[List[str]]):
+        try:
+            return self.parent_wrapper.dump(exclude=exclude)
+        except AttributeError:
+            return {}
+
 
 class CurrentSurveyVersionWrapper(SurveyVersionWrapper):
-    pass
+    
+    def _get_survey_dump(self, exclude: Optional[List[str]]):
+        try:
+            if exclude is None:
+                return self.parent_wrapper.dump(exclude = ['currentVersion'])
+            if 'currentVersionNode' not in exclude:
+                exclude.append('currentVersionNode') 
+            return self.parent_wrapper.dump()
+        except AttributeError:
+            return {}
+            
+
 
 class SurveyWrapper:
     def __init__(self, survey: Optional["sm.Survey"] = None) -> None:
         if survey is not None:
             self.survey = survey
-        self.survey_version_definition = dict(
-            node_class=sm.Survey,
-            direction=OUTGOING,
-            relation_type="SURVEY_VERSION",
-            model = sm.Survey_SurveyVersion_Rel
-        )
+            self.refreshed = True
+        self.refreshed = False
     @property
     def slug(self) -> str:
         return self._slug
@@ -106,12 +144,17 @@ class SurveyWrapper:
     
     @property
     def currentVersionNode(self) -> "sm.SurveyVersion":
+        if hasattr(self, "_currentVersionNode") and self._currentVersionNode is not None:
+            if self.refreshed is True:
+               self.currentVersion
+            return self._currentVersionNode
+        self.currentVersion
         return self._currentVersionNode
 
     @property
     def currentVersion(self) -> CurrentSurveyVersionWrapper:
         # check if we have already assigned the private variable
-        if hasattr(self,"_currentVersion") and self._currentVersion is not None:
+        if self.refreshed == False and hasattr(self,"_currentVersion") and self._currentVersion is not None:
             return self._currentVersion
         
         # if not we try and retrieve the current version
@@ -134,6 +177,7 @@ class SurveyWrapper:
         if isinstance(currentVersion, str):
             currentVersion = sm.SurveyVersion.nodes.get(nodeId = currentVersion)
         currentVersion = cast("sm.SurveyVersion", currentVersion)
+        
         # get the single survey node or none if the version is not attached to a survey
         currentVersionSurvey = currentVersion.survey.get_or_none()
 
@@ -150,17 +194,18 @@ class SurveyWrapper:
             self._currentVersionNode.currentVersion = True
             self._currentVersionNode.save()
             self._survey.versions.connect(self._currentVersionNode)
-        # if the currentVersion bool flag is not true then set this to be true
+        # if the currentVersion bool flag is not  true then set this to be true
         if self._currentVersionNode.currentVersion != True:
             self._currentVersionNode.currentVersion = True
             self._currentVersionNode.save()
         
         for version in self._survey.versions:
-            if version != self._currentVersion:
+            if version != self._currentVersionNode:
                 version.currentVersion = False
                 version.save()
         # finally wrap the current version in it's current version wrapper
         self._currentVersion = CurrentSurveyVersionWrapper(self._currentVersionNode, self) # type: CurrentSurveyVersionWrapper
+        self.refreshed = False
 
     def set_survey_variables(self,**kwargs) -> None:
         for key in kwargs:
@@ -241,45 +286,44 @@ class SurveyWrapper:
              only: Optional[List[str]] = None,
              customSchema: Optional[SurveySchema] = None) -> dict:
 
-        if only is not None and len(only) == 1 and only[0] == 'currentVersion':
+        if only is not None and len(only) == 1 and only[0] == 'currentVersionNode':
             return self._get_current_version_dump(exclude=exclude)
         elif only is not None and len(only) == 1 and only[0] == "versions":
             return self._get_versions_dump()
-        
-        if exclude is None and only is None:
-            survey_dump = SurveySchema().dump(self.survey)
+        elif exclude is None and only is None:
+            survey_dump = SurveySchema().dump(self.survey).data
             versions = self._get_versions_dump()
-            currentVersion = self._get_current_version_dump()
-            survey_dump['currentVersion'] = currentVersion
+            currentVersionNode = self._get_current_version_dump()
+            survey_dump['currentVersionNode'] = currentVersionNode
             survey_dump['versions'] = versions
-        elif exclude is not None:
-            survey_dump = SurveySchema(exclude=tuple(exclude)).dump(self.survey)
-            if 'currentVersion' not in exclude:
-                survey_dump['currentVersion'] = self._get_current_version_dump()
+        elif exclude is not None and only is None:
+            survey_dump = SurveySchema(exclude=tuple(exclude)).dump(self.survey).data
+            if 'currentVersionNode' not in exclude:
+                survey_dump['currentVersionNode'] = self._get_current_version_dump()
             if 'versions' not in exclude:
                 survey_dump['versions'] = self._get_versions_dump()
-        elif only is not None:
+        elif only is not None and exclude is None:
             original_only = only
-            if 'currentVersion' in only:
-                only.remove('currentVersion')
+            if 'currentVersionNode' in only:
+                only.remove('currentVersionNode')
             if 'versions' in only:
                 only.remove('versions')
-            survey_dump = SurveySchema(only=tuple(only)).dump(self.survey)
-            if 'currentVersion' in original_only:
-                survey_dump['currentVersion'] = self._get_current_version_dump()
+            survey_dump = SurveySchema(only=tuple(only)).dump(self.survey).data
+            if 'currentVersionNode' in original_only:
+                survey_dump['currentVersionNode'] = self._get_current_version_dump()
             if 'versions' in original_only:
                 survey_dump['versions'] = self._get_versions_dump()
-
         else:
             raise ValueError('exclude and only arguments are mutually exclusive')
-        
         return survey_dump
 
     def _get_current_version_dump(self, 
                                   exclude : Optional[List[str]] = None) -> dict:
         try:
             if exclude is None:
-                return self.currentVersion.dump()
+                return self.currentVersion.dump(exclude=['survey'])
+            elif 'survey' not in exclude:
+                exclude.append('survey')
             return self.currentVersion.dump(exclude=exclude)
         except NoCurrentVersionFound:
             return {}
@@ -288,12 +332,12 @@ class SurveyWrapper:
         versions = []
         for version in self.survey.versions:
             versions.append(
-                SurveyVersionWrapper(version).dump(only=['nodeID'])
+                SurveyVersionWrapper(version).dump(only=['nodeId'])
             )
         return versions
 
     def contains_version(self, version: "sm.SurveyVersion") -> bool:
-        return version in self._survey.versions
+        return version in self.survey.versions
 
     def save(self) -> None:
         self._survey.save()

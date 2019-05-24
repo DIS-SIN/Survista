@@ -92,8 +92,8 @@ class Test_Survey_Wrapper:
                 test_survey = test_survey_wrapper_1.survey
 
                 test_survey.versions.connect(test_survey_version_1)
-                
-                assert test_survey_wrapper_1.currentVersion == test_survey_version_1
+                assert test_survey_version_1 in test_survey.versions
+                assert test_survey_wrapper_1.currentVersionNode == test_survey_version_1
 
     def test_SurveyWrapper_currentVersion_setter_with_node(self):
         with self.app.app_context():
@@ -328,6 +328,9 @@ class Test_Survey_Wrapper:
                     datetime(2019,4,23,18,2,40,12,pytz.utc),
                 )
                 
+                for i in range(0,len(nodes)):
+                    nodes[i] = nodes[i].version
+
                 assert test_survey_version_4 not in nodes
                 assert test_survey_version_5 in nodes
                 assert test_survey_version_6 in nodes
@@ -341,6 +344,8 @@ class Test_Survey_Wrapper:
                     False,
                     False
                 )
+                for i in range(0,len(nodes)):
+                    nodes[i] = nodes[i].version
                 
                 assert test_survey_version_4 not in nodes
                 assert test_survey_version_5 not in nodes
@@ -355,6 +360,9 @@ class Test_Survey_Wrapper:
                     False,
                     True 
                 )
+                for i in range(0,len(nodes)):
+                    nodes[i] = nodes[i].version
+                
                 assert test_survey_version_4 not in nodes
                 assert test_survey_version_5 not in nodes
                 assert test_survey_version_6 in nodes
@@ -368,12 +376,30 @@ class Test_Survey_Wrapper:
                     True,
                     True 
                 )
+                for i in range(0,len(nodes)):
+                    nodes[i] = nodes[i].version
+                
                 assert test_survey_version_4 not in nodes
                 assert test_survey_version_5 in nodes
                 assert test_survey_version_6 in nodes
                 assert test_survey_version_7 in nodes
                 assert test_survey_version_8 not in nodes
                 assert len(nodes) == 3 
+    
+    def test_SurveyWrapper_dump_method(self):
+        with self.app.app_context():
+            from src.database.db import get_db
+
+            current_transaction = get_db().transaction
+
+            test_survey_wrapper_3 = pytest.test_survey_wrapper_3
+
+            with current_transaction:
+                output = test_survey_wrapper_3.dump()
+            
+            pytest.test_output_1 = output
+    
+    
 
 
 

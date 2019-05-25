@@ -26,7 +26,17 @@ class SurveyVersionWrapper:
         if parent_wrapper is not None:
             self.parent_wrapper = parent_wrapper
     
-    
+    @property
+    def nodeId(self) -> Union[str, None]:
+        if hasattr(self,'_nodeId'):
+            return self._nodeId
+        return None
+
+    @property
+    def title(self) -> Union[str, None]:
+        if hasattr(self,'_title'):
+            return self._title
+        return None
     @property
     def isCurrentVersion(self) -> bool:
         return self._isCurrentVersion
@@ -41,6 +51,8 @@ class SurveyVersionWrapper:
             version = sm.SurveyVersion.nodes.get(nodeId=version)
         version = cast(sm.SurveyVersion, version)
         self._version = version
+        self._nodeId = version.nodeId
+        self._title = version.title
         self._questionsManager = self._version.questions
         self._isCurrentVersion = version.currentVersion
     

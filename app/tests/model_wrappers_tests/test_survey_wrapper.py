@@ -32,7 +32,7 @@ class Test_Survey_Wrapper:
             
             pytest.test_survey_1 = test_survey_1 # type: Survey
     
-    def test_construct_SurveyWrapper(self):
+    def test_construct_wrapper(self):
         test_survey_1 = pytest.test_survey_1
         test_survey_wrapper_1 = SurveyWrapper(test_survey_1)
         pytest.test_survey_wrapper_1 = test_survey_wrapper_1 # type: SurveyWrapper
@@ -500,6 +500,7 @@ class Test_Survey_Wrapper:
             
             with pytest.raises(KeyError):
                 test_output_3['currentVersionNode']
+    
 
 
             

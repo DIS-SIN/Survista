@@ -5,7 +5,7 @@ import src.models.question_model as qm
 
 from src.database.db import get_db
 from datetime import datetime
-from neomodel.exceptions import DoesNotExist
+from neomodel.exceptions import DoesNotExist, NeomodelException
 from neomodel import NodeSet, Traversal, RelationshipManager
 from neomodel.match import OUTGOING
 from .question_wrapper import QuestionWrapper
@@ -53,19 +53,22 @@ class SurveyVersionWrapper:
         self._version = version
         self._nodeId = version.nodeId
         self._title = version.title
-        self._questionsManager = self._version.questions
-        self._isCurrentVersion = version.currentVersion
+        self._questions = self._version.questions
+        self._prequestions = self._version.preQuestions
+        self._previousVersion = self._version.previousVersion
+        self._isCurrentVersion = self._version.currentVersion
     
     @property
     def questions(self) -> List[QuestionWrapper]:
-        if hasattr(self, "_questions"):
-            return self._questions
-        
-        self._questions = [] # type: List[QuestionWrapper]
-        for question in self._questionsManager:
-            self._questions.append(QuestionWrapper(question))
-        
-        return self._questions
+        if not hasattr(self, '_version'):
+           raise ValueError('version has not been assigned')
+        elif isinstance(self._questions, RelationshipManager):
+            questions = []
+            for question in self._questions:
+                wrapped_question = QuestionWrapper(question)
+                questions.append(wrapped_question)
+            self._questions = questions
+        return self._questions 
     
     @property
     def parent_wrapper(self) -> "SurveyWrapper":
@@ -80,44 +83,98 @@ class SurveyVersionWrapper:
                 f"The SurveyVersion in the parent wrapper does not exist in the survey slug: {parent_wrapper.slug} " +
                 f"nodeId: {parent_wrapper.nodeId}"
             )
+    @property
+    def previous_version(self) -> "SurveyVersionWrapper":
+        if not hasattr(self, '_version'):
+            raise ValueError('No SurveyVersion is assigned to this wrapper')
+        elif isinstance(self._previousVersion, RelationshipManager):
+            try:
+                self._previousVersion =  SurveyVersionWrapper(self._previousVersion.single())
+            except NeomodelException:
+                self._previousVersion = None
+        self._previousVersion = cast(SurveyVersionWrapper, self._previousVersion)
+        return self._previousVersion
+    def add_question(self, question: 'qm.Question', rel_props: Optional[dict] = None):
+        try:
+            rel = self._version.questions.connect(question, rel_props)
+        except ValueError:
+            question.save()
+            rel = self._version.questions.connect(question, rel_props)
+        rel.save()
+        if isinstance(self._questions, RelationshipManager):
+            self._questions = self._version.questions
+        else:
+            self._questions.append(QuestionWrapper(question))
     
     def dump(self, exclude: Optional[List[str]] = None, only: Optional[List[str]] = None):
         if only is not None and len(only) == 1 and only[0] == 'survey':
             return self._get_survey_dump(exclude=exclude)
+        elif only is not None and len(only) ==1 and only[0] == "previousVersions":
+            return self._get_previous_versions_dump()
         elif exclude is None and only is None:
-            version_dump = SurveyVersionSchema().dump(self.version)
-            survey_dump  = self._get_survey_dump(exclude=exclude)
-            version_dump['survey'] = survey_dump
+            version_dump = SurveyVersionSchema().dump(self.version).data
+            version_dump['survey'] = self._get_survey_dump(exclude=exclude)
+            version_dump['previousVersions'] = self._get_previous_versions_dump()
         elif exclude is not None and only is None:
             version_dump = SurveyVersionSchema(exclude=tuple(exclude)).dump(self.version).data
             if 'survey' not in exclude:
-                survey_dump = self._get_survey_dump(exclude=exclude)
-                version_dump['survey'] = survey_dump
+                version_dump['survey'] = self._get_survey_dump(exclude=exclude)
+            if 'previousVersions' not in exclude:
+                version_dump['previousVersions'] = self._get_previous_versions_dump()
         elif exclude is None and only is not None:
-            original_only = only
-            if 'survey' in only:
+            try:
                 only.remove('survey')
-            version_dump = SurveyVersionSchema(only=only).dump(self.version)
-            if 'survey' in original_only:
-                survey_dump = self._get_survey_dump(exclude=exclude)
+                survey_dump = self._get_survey_dump()
+            except ValueError:
+                survey_dump = None
+
+            try:
+                only.remove('previousVersions')
+                previous_versions_dump = self._get_previous_versions_dump()
+            except ValueError:
+                previous_versions_dump = None 
+            
+            version_dump = SurveyVersionSchema(only=only).dump(self.version).data
+            
+            if survey_dump is not None:
                 version_dump['survey'] = survey_dump
+            if previous_versions_dump is not None:
+                version_dump['previousVersions'] = previous_versions_dump
+                
         else:
             raise ValueError('exclude and only are mutaually exclusive')
         return version_dump
     
-    def _get_survey_dump(self, exclude: Optional[List[str]]):
+    def _get_survey_dump(self, exclude: Optional[List[str]] = None):
         try:
             return self.parent_wrapper.dump(exclude=exclude)
         except AttributeError:
             return {}
+    
+    def _get_previous_versions_dump(self):
+        return self._get_previous_versions_dump_rec([])
+    
+    def _get_previous_versions_dump_rec(self, dumps: list):
+        if self.previous_version is None:
+            return dumps    
+       
+        prev_version_dump = self.previous_version.dump(
+            only= ['nodeId', 'title']
+        )
+
+        dumps.append(prev_version_dump)
+
+        dumps = self.previous_version._get_previous_versions_dump_rec(dumps)
+
+        return dumps
 
 
 class CurrentSurveyVersionWrapper(SurveyVersionWrapper):
     
-    def _get_survey_dump(self, exclude: Optional[List[str]]):
+    def _get_survey_dump(self, exclude: Optional[List[str]] = None):
         try:
             if exclude is None:
-                return self.parent_wrapper.dump(exclude = ['currentVersion'])
+                return self.parent_wrapper.dump(exclude = ['currentVersionNode'])
             if 'currentVersionNode' not in exclude:
                 exclude.append('currentVersionNode') 
             return self.parent_wrapper.dump()
@@ -203,10 +260,15 @@ class SurveyWrapper:
 
         # if the version does not have a survey then create a relationship and set currentVersion bool flag
         if currentVersionSurvey is None:
-            self._currentVersionNode.currentVersion = True
-            self._currentVersionNode.save()
             self._survey.versions.connect(self._currentVersionNode)
         # if the currentVersion bool flag is not  true then set this to be true
+       
+        previous_version = self._survey.versions.get_or_none(currentVersion = True)
+
+        if currentVersionSurvey is None and previous_version is not None\
+            and len(self._currentVersionNode.previousVersion) == 0:
+            self._currentVersionNode.previousVersion.connect(previous_version)
+
         if self._currentVersionNode.currentVersion != True:
             self._currentVersionNode.currentVersion = True
             self._currentVersionNode.save()

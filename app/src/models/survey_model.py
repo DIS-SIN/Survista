@@ -59,12 +59,17 @@ class SurveyVersion(SemiStructuredNode):
         model=Survey_SurveyVersion_Rel,
         cardinality=One
     )
+    previousVersion = RelationshipTo(
+        'SurveyVersion',
+        'PREVIOUS_VERSION',
+        cardinality=One
+    )
     questions = RelationshipTo(
         '.question_model.Question',
         "SURVEY_QUESTION",
         model=SurveyVersion_Question_Rel
     )
-    prequestions = RelationshipTo(
+    preQuestions = RelationshipTo(
         '.question_model.PreQuestion',
         "SYRVEY_PRE_QUESTION",
         model=SurveyVersion_PreQuestion_Rel

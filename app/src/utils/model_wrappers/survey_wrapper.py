@@ -10,6 +10,7 @@ from neomodel import NodeSet, Traversal, RelationshipManager
 from neomodel.match import OUTGOING
 from src.utils.marshmallow.survey_schema import SurveySchema
 from src.utils.marshmallow.surveyversion_schema import SurveyVersionSchema
+from src.utils.generators.slug_generator import generate_slug
 import model_wrappers.question_wrapper as qw
 
 # TODO 
@@ -288,7 +289,10 @@ class SurveyWrapper:
         self._survey = survey
         self._slug = survey.slug
         self._nodeId = survey.nodeId
-    
+        if self._survey.slug is None or self._survey.slug == "":
+            self._survey.slug = generate_slug('survey', sm.Survey)
+            self._survey.save()
+
     @property
     def currentVersionNode(self) -> "sm.SurveyVersion":
         if hasattr(self, "_currentVersionNode") and self._currentVersionNode is not None:

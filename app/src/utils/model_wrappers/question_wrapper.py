@@ -3,7 +3,9 @@ import src.models.question_model as qm
 from src.utils.marshmallow.question_schema import QuestionSchema
 from src.utils.marshmallow.prequestion_schema import PreQuestionSchema
 from neomodel import RelationshipManager
+from src.utils.generators.slug_generator import generate_slug
 import model_wrappers.survey_wrapper as sw
+
 
 class QuestionWrapper:
 
@@ -25,6 +27,9 @@ class QuestionWrapper:
         self._surveyVersions = question.surveyVersions
         self._nodeId = self._question.nodeId
         self._preQuestions = self._question.preQuestions
+        if self._question.slug is None or self._question.slug == "":
+            self._question.slug = generate_slug('question', qm.Question)
+            self._question.save()
     
     @property
     def nodeId(self):
@@ -180,6 +185,9 @@ class PreQuestionWrapper:
         self._nodeId = self._preQuestion.nodeId
         self._questions = self._preQuestion.questions
         self._surveyVersions = self._preQuestion.surveyVersions
+        if self._preQuestion.slug is None or self._preQuestion.slug == "":
+            self._preQuestion.slug = generate_slug('preQuestion', qm.PreQuestion)
+            self._preQuestion.save()
 
     @property
     def nodeId(self):

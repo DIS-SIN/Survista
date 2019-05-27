@@ -205,10 +205,7 @@ class Test_Survey_SurveyVersion_Relationship:
             pytest.test_Survey_SurveyVersion_rel_1 = rel
             pytest.test_Survey_1 = test_Survey_1
             pytest.test_SurveyVersion_1 = test_SurveyVersion_1
-    def test_addedOn_field_is_datetime(self):
-        assert pytest.test_Survey_SurveyVersion_rel_1.addedOn is not None
-        assert isinstance(pytest.test_Survey_SurveyVersion_rel_1.addedOn, datetime)
-    
+
     def test_one_cardinality_for_SurveyVersion(self):
         with self.app.app_context():
             from src.database.db import get_db

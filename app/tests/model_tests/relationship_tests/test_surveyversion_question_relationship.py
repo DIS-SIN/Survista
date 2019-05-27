@@ -37,7 +37,4 @@ class Test_SurveyVersion_Question_Relationship:
                 pytest.test_question_1 = test_question_1
                 pytest.test_surveyversion_1 = test_surveyversion_1
                 pytest.test_surveyversion_question_rel_1 = rel
-    def test_addedOn_field_is_datetime(self):
-        assert pytest.test_surveyversion_question_rel_1.addedOn is not None
-        assert isinstance(pytest.test_surveyversion_question_rel_1.addedOn, datetime)
 

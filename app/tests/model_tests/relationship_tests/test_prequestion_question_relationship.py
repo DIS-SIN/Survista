@@ -40,10 +40,3 @@ class Test_Prequestion_Question_Relationship:
                 pytest.test_question_1 = test_question_1
                 pytest.test_prequestion_1 = test_prequestion_1
                 pytest.test_prequestion_question_rel_1 = rel
-    
-    def test_addedOn_field_is_datetime(self):
-        assert pytest.test_prequestion_question_rel_1.addedOn is not None
-        assert isinstance(
-            pytest.test_prequestion_question_rel_1.addedOn,
-            datetime
-        )

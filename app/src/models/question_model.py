@@ -10,11 +10,9 @@ from neomodel import (
 )
 from datetime import datetime
 
-from .relationships.survey_relationships import SurveyVersion_Question_Rel
 from .relationships.question_relationships import (
     Question_Question_Rel,
-    PreQuestion_PreQuestion_Rel,
-    PreQuestion_Question_Rel
+    PreQuestion_PreQuestion_Rel
 )
 
 class Question(SemiStructuredNode):
@@ -32,11 +30,15 @@ class Question(SemiStructuredNode):
         'RELATED_QUESTION',
         model= Question_Question_Rel
     )
-    related_surveys = RelationshipFrom(
-        ".survey_model.SurveyVersion",
-        "SURVEY_QUESTION",
-        model=SurveyVersion_Question_Rel
+    preQuestions = RelationshipFrom(
+        'PreQuestion',
+        'PREQUESTION_QUESTION'
     )
+    surveyVersions = RelationshipFrom(
+        ".survey_model.SurveyVersion",
+        "SURVEY_QUESTION"
+    )
+
 class PreQuestion(SemiStructuredNode):
     nodeId = UniqueIdProperty()
     slug = StringProperty(unique_index=True)
@@ -50,12 +52,16 @@ class PreQuestion(SemiStructuredNode):
     addedOn = DateTimeProperty(default_now=True)
     related_prequestions = Relationship(
         'PreQuestion',
-        'RELATED_PRE_QUESTION',
+        'RELATED_PREQUESTION',
         model= PreQuestion_PreQuestion_Rel
     )
     questions = RelationshipTo(
         Question,
-        'PREQUESTION_QUESTION',
-        model= PreQuestion_Question_Rel
+        'PREQUESTION_QUESTION'
     )
+    surveyVersions = RelationshipFrom(
+        '.survey_model.SurveyVersion',
+        'SURVEY_PREQUESTION'
+    )
+
 

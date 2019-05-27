@@ -15,7 +15,3 @@ class PreQuestion_PreQuestion_Rel(StructuredRel):
      }
     )
     addedOn = DateTimeProperty(default_now=True)
-
-class PreQuestion_Question_Rel(StructuredRel):
-    addedOn = DateTimeProperty(default_now=True)
-    

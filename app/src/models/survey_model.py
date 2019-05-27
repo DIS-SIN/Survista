@@ -11,12 +11,8 @@ from neomodel import(
     One,
     OneOrMore
 )
-from .relationships.survey_relationships import (
-    Survey_Survey_Rel, 
-    SurveyVersion_Question_Rel, 
-    Survey_SurveyVersion_Rel,
-    SurveyVersion_PreQuestion_Rel
-)
+from .relationships.survey_relationships import Survey_Survey_Rel
+
 
 from datetime import datetime
 import pytz
@@ -35,7 +31,6 @@ class Survey(SemiStructuredNode):
     versions = RelationshipTo(
         'SurveyVersion',
         'SURVEY_VERSION',
-        model=Survey_SurveyVersion_Rel,
         cardinality=OneOrMore
     )
     related_surveys = Relationship(
@@ -49,14 +44,13 @@ class Survey(SemiStructuredNode):
 
 
 class SurveyVersion(SemiStructuredNode):
-
     nodeId = UniqueIdProperty()
     title = StringProperty(required=True)
     currentVersion = BooleanProperty(default=False)
+    addedOn = DateTimeProperty(default_now=True)
     survey = RelationshipFrom(
         Survey,
         'SURVEY_VERSION',
-        model=Survey_SurveyVersion_Rel,
         cardinality=One
     )
     previousVersion = RelationshipTo(
@@ -66,11 +60,9 @@ class SurveyVersion(SemiStructuredNode):
     )
     questions = RelationshipTo(
         '.question_model.Question',
-        "SURVEY_QUESTION",
-        model=SurveyVersion_Question_Rel
+        "SURVEY_QUESTION"
     )
     preQuestions = RelationshipTo(
         '.question_model.PreQuestion',
-        "SYRVEY_PRE_QUESTION",
-        model=SurveyVersion_PreQuestion_Rel
+        "SURVEY_PREQUESTION"
     )

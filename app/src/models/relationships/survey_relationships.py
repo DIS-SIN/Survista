@@ -5,13 +5,6 @@ from neomodel import (
     StringProperty
 )
 
-class Survey_SurveyVersion_Rel(StructuredRel):
-    addedOn = DateTimeProperty(default_now=True)
-
-class SurveyVersion_Question_Rel(StructuredRel):
-    addedOn = DateTimeProperty(default_now=True)
-
-
 class Survey_Survey_Rel(StructuredRel):
     reason = StringProperty(
         choices={
@@ -22,7 +15,4 @@ class Survey_Survey_Rel(StructuredRel):
         required = True
     )
     description = StringProperty()
-    addedOn = DateTimeProperty(default_now=True)
-
-class SurveyVersion_PreQuestion_Rel(StructuredRel):
     addedOn = DateTimeProperty(default_now=True)

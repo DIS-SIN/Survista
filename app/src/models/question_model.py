@@ -1,9 +1,10 @@
-from neomodel.contrib import SemiStructuredNode
+from neomodel.contrib import StructuredNode
 from neomodel import (
     UniqueIdProperty,
     StringProperty,
     DateTimeProperty,
     BooleanProperty,
+    ArrayProperty,
     Relationship,
     RelationshipFrom,
     RelationshipTo
@@ -15,7 +16,7 @@ from .relationships.question_relationships import (
     PreQuestion_PreQuestion_Rel
 )
 
-class Question(SemiStructuredNode):
+class Question(StructuredNode):
     nodeId = UniqueIdProperty()
     slug = StringProperty(unique_index=True)
     language = StringProperty(required=True, choices={
@@ -25,6 +26,14 @@ class Question(SemiStructuredNode):
                         )
     question = StringProperty(unique_index=True)
     addedOn = DateTimeProperty(default_now=True)
+    options = ArrayProperty(base_property= StringProperty())
+    type = StringProperty(
+        choices={
+            'text': 'text',
+            'mcq': 'mcq',
+            'dropdown': 'dropdown'
+        }
+    )
     related_questions = Relationship(
         'Question',
         'RELATED_QUESTION',
@@ -39,7 +48,7 @@ class Question(SemiStructuredNode):
         "SURVEY_QUESTION"
     )
 
-class PreQuestion(SemiStructuredNode):
+class PreQuestion(StructuredNode):
     nodeId = UniqueIdProperty()
     slug = StringProperty(unique_index=True)
     language = StringProperty(required=True, choices={
